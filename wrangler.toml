@@ -7,14 +7,5 @@ directory = "./public"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
 
-[[d1_databases]]
-binding = "DB"
-database_name = "tapa-membership-db"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
-
-[[r2_buckets]]
-binding = "FILES"
-bucket_name = "tapa-member-files"
-
 [vars]
 ADMIN_EMAIL = "tapatobago@gmail.com"
