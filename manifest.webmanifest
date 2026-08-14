@@ -1,0 +1,9 @@
+{
+  "name": "TAPA Digital Membership & Processor Registry",
+  "short_name": "TAPA Membership",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f2fb",
+  "theme_color": "#5b35b5",
+  "icons": []
+}

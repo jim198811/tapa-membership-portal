@@ -1,0 +1,1 @@
+const C='tapa-cf-v1',F=['/','/styles.css','/app.js','/manifest.webmanifest'];self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(F))));self.addEventListener('fetch',e=>{if(e.request.method==='GET'&&!e.request.url.includes('/api/'))e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)))})
