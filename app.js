@@ -3,10 +3,60 @@ window.openView=id=>{views.forEach(v=>$(v).classList.toggle("hidden",v!==id));do
 document.querySelectorAll(".nav[data-view]").forEach(b=>b.onclick=()=>openView(b.dataset.view));
 $("shareBtn").onclick=async()=>{const d={title:"TAPA Membership Portal",text:"Complete your Tobago Agro Processors Association membership registration.",url:location.href};if(navigator.share)await navigator.share(d);else{await navigator.clipboard.writeText(location.href);alert("Portal link copied. Paste it into the TAPA group.")}};
 const creds=["Food Badge","Farmers Badge","Agro-processing Badge","Free Sale Certificate","Food Safety Training","GMP","HACCP","Other"],supports=["Business Registration","Accounting","Product Development","Marketing","Research / Innovation","Sales","Distribution","Product Testing","Packaging & Labelling","Food Safety / Certification","Financing","Export Readiness","Other"];
-async function loadCategories(){const cats=await fetch("/api/public/categories").then(r=>r.json());$("categoryList").innerHTML=cats.map(x=>`<label class="check"><input type="checkbox" name="categories" value="${esc(x)}"> ${esc(x)}</label>`).join("");$("primaryGroup").innerHTML='<option value="">Select primary group</option>'+cats.map(x=>`<option>${esc(x)}</option>`).join("")}
-$("credentialList").innerHTML=creds.map(x=>`<label class="check"><input type="checkbox" name="credentials" value="${esc(x)}"> ${esc(x)}</label>`).join("");$("supportList").innerHTML=supports.map(x=>`<label class="check"><input type="checkbox" name="supportNeeds" value="${esc(x)}"> ${esc(x)}</label>`).join("");loadCategories();
-$("applicationForm").onsubmit=async e=>{e.preventDefault();$("formMsg").innerHTML='<div class="message">Submitting…</div>';try{const r=await fetch("/api/applications",{method:"POST",body:new FormData(e.target)}),j=await r.json();if(!r.ok)throw new Error(j.error||"Submission failed");e.target.reset();$("formMsg").innerHTML=`<div class="message ok"><b>Registration submitted.</b><br>Your application number is <b>${esc(j.applicationNo)}</b>. Save it to check your status.</div>`}catch(err){$("formMsg").innerHTML=`<div class="message bad">${esc(err.message)}</div>`}};
-$("checkStatusBtn").onclick=async()=>{const r=await fetch("/api/status",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({applicationNo:$("statusNo").value,email:$("statusEmail").value})}),j=await r.json();$("statusResult").innerHTML=r.ok?`<div class="message ok"><b>${esc(j.business_name||j.full_name)}</b><br>${esc(j.application_no)}<br>Status: <b>${esc(j.status)}</b><br>Primary Group: ${esc(j.primary_group)}</div>`:`<div class="message bad">${esc(j.error)}</div>`};
+async function loadCategories() {
+  const categoryList = document.getElementById("categoryList");
+  const primaryGroup = document.getElementById("primaryGroup");
+
+  try {
+    const response = await fetch("/api/public/categories");
+    const categories = await response.json();
+
+    if (!response.ok) {
+      throw new Error("Could not load processor classifications.");
+    }
+
+    // Your Worker returns an array of names such as:
+    // ["Dairy", "Honey", "Bakery & Confectionery", etc.]
+
+    const names = categories.map((item) =>
+      typeof item === "string" ? item : item.name
+    );
+
+    // Multiple category checkboxes
+    if (categoryList) {
+      categoryList.innerHTML = names.map((name) => `
+        <label class="check">
+          <input
+            type="checkbox"
+            name="categories"
+            value="${esc(name)}"
+          >
+          ${esc(name)}
+        </label>
+      `).join("");
+    }
+
+    // Primary Processor Classification dropdown
+    if (primaryGroup) {
+      primaryGroup.innerHTML = `
+        <option value="">Select processor classification</option>
+        ${names.map((name) => `
+          <option value="${esc(name)}">
+            ${esc(name)}
+          </option>
+        `).join("")}
+      `;
+    }
+
+  } catch (err) {
+    console.error("Processor classification error:", err);
+
+    if (primaryGroup) {
+      primaryGroup.innerHTML =
+        `<option value="">Unable to load classifications</option>`;
+    }
+  }
+}
 async function checkAdmin(){const me=await fetch("/api/admin/me").then(r=>r.json());$("adminLogin").classList.toggle("hidden",me.authenticated);$("adminPanel").classList.toggle("hidden",!me.authenticated);if(me.authenticated){loadDashboard();loadApplications();loadAdminCategories()}}
 $("loginBtn").onclick=async()=>{const r=await fetch("/api/admin/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("adminEmail").value,password:$("adminPassword").value})}),j=await r.json();if(!r.ok){$("loginMsg").innerHTML=`<div class="message bad">${esc(j.error)}</div>`;return}checkAdmin()};
 $("logoutBtn").onclick=async()=>{await fetch("/api/admin/logout",{method:"POST"});checkAdmin()};
