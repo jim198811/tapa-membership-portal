@@ -1,23 +1,1385 @@
-const $=id=>document.getElementById(id),views=["home","apply","status","admin"];
-window.openView=id=>{views.forEach(v=>$(v).classList.toggle("hidden",v!==id));document.querySelectorAll(".nav[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===id));if(id==="admin")checkAdmin();window.scrollTo({top:0,behavior:"smooth"})};
-document.querySelectorAll(".nav[data-view]").forEach(b=>b.onclick=()=>openView(b.dataset.view));
-$("shareBtn").onclick=async()=>{const d={title:"TAPA Membership Portal",text:"Complete your Tobago Agro Processors Association membership registration.",url:location.href};if(navigator.share)await navigator.share(d);else{await navigator.clipboard.writeText(location.href);alert("Portal link copied. Paste it into the TAPA group.")}};
-const creds=["Food Badge","Farmers Badge","Agro-processing Badge","Free Sale Certificate","Food Safety Training","GMP","HACCP","Other"],supports=["Business Registration","Accounting","Product Development","Marketing","Research / Innovation","Sales","Distribution","Product Testing","Packaging & Labelling","Food Safety / Certification","Financing","Export Readiness","Other"];
-async function loadCategories(){const cats=await fetch("/api/public/categories").then(r=>r.json());$("categoryList").innerHTML=cats.map(x=>`<label class="check"><input type="checkbox" name="categories" value="${esc(x)}"> ${esc(x)}</label>`).join("");$("primaryGroup").innerHTML='<option value="">Select primary group</option>'+cats.map(x=>`<option>${esc(x)}</option>`).join("")}
-$("credentialList").innerHTML=creds.map(x=>`<label class="check"><input type="checkbox" name="credentials" value="${esc(x)}"> ${esc(x)}</label>`).join("");$("supportList").innerHTML=supports.map(x=>`<label class="check"><input type="checkbox" name="supportNeeds" value="${esc(x)}"> ${esc(x)}</label>`).join("");loadCategories();
-$("applicationForm").onsubmit=async e=>{e.preventDefault();$("formMsg").innerHTML='<div class="message">Submitting…</div>';try{const r=await fetch("/api/applications",{method:"POST",body:new FormData(e.target)}),j=await r.json();if(!r.ok)throw new Error(j.error||"Submission failed");e.target.reset();$("formMsg").innerHTML=`<div class="message ok"><b>Registration submitted.</b><br>Your application number is <b>${esc(j.applicationNo)}</b>. Save it to check your status.</div>`}catch(err){$("formMsg").innerHTML=`<div class="message bad">${esc(err.message)}</div>`}};
-$("checkStatusBtn").onclick=async()=>{const r=await fetch("/api/status",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({applicationNo:$("statusNo").value,email:$("statusEmail").value})}),j=await r.json();$("statusResult").innerHTML=r.ok?`<div class="message ok"><b>${esc(j.business_name||j.full_name)}</b><br>${esc(j.application_no)}<br>Status: <b>${esc(j.status)}</b><br>Primary Group: ${esc(j.primary_group)}</div>`:`<div class="message bad">${esc(j.error)}</div>`};
-async function checkAdmin(){const me=await fetch("/api/admin/me").then(r=>r.json());$("adminLogin").classList.toggle("hidden",me.authenticated);$("adminPanel").classList.toggle("hidden",!me.authenticated);if(me.authenticated){loadDashboard();loadApplications();loadAdminCategories()}}
-$("loginBtn").onclick=async()=>{const r=await fetch("/api/admin/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("adminEmail").value,password:$("adminPassword").value})}),j=await r.json();if(!r.ok){$("loginMsg").innerHTML=`<div class="message bad">${esc(j.error)}</div>`;return}checkAdmin()};
-$("logoutBtn").onclick=async()=>{await fetch("/api/admin/logout",{method:"POST"});checkAdmin()};
-async function loadDashboard(){const j=await fetch("/api/admin/dashboard").then(r=>r.json());$("stTotal").textContent=j.total;$("stPending").textContent=j.pending;$("stReview").textContent=j.review;$("stApproved").textContent=j.approved}
-async function loadApplications(){const q=encodeURIComponent($("searchApps").value||""),s=encodeURIComponent($("filterStatus").value||"");const rows=await fetch(`/api/admin/applications?q=${q}&status=${s}`).then(r=>r.json());$("appRows").innerHTML=rows.map(r=>`<tr><td>${esc(r.application_no)}</td><td>${esc(r.full_name)}</td><td>${esc(r.business_name||"-")}</td><td>${esc(r.primary_group)}</td><td><span class="badge">${esc(r.status)}</span></td><td><button class="secondary" onclick="viewApp(${r.id})">Review</button></td></tr>`).join("")||'<tr><td colspan="6">No applications found.</td></tr>'}
-$("searchBtn").onclick=loadApplications;
-window.viewApp=async id=>{const a=await fetch("/api/admin/applications/"+id).then(r=>r.json());const items=[["Application",a.application_no],["Name",a.full_name],["Email",a.email],["Phone",a.phone],["Address",a.address],["Business",a.business_name||"-"],["Business Type",a.business_type],["Description",a.business_description],["Primary Group",a.primary_group],["Other Groups",(a.categories||[]).join(", ")||"-"],["Products",a.products||"-"],["Years in Business",a.years_business],["Credentials",(a.credentials||[]).join(", ")||"-"],["Support Needs",(a.support_needs||[]).join(", ")||"-"],["Member Expectations",a.expectations||"-"]];$("modalBody").innerHTML=`<h2>${esc(a.application_no)}</h2><div class="detailgrid">${items.map(([k,v])=>`<div class="detail"><small>${esc(k)}</small>${esc(v)}</div>`).join("")}</div><h3 style="margin-top:20px">Documents</h3>${(a.documents||[]).length?a.documents.map(d=>`<p><a target="_blank" href="/api/admin/documents/${d.id}">${esc(d.original_name)}</a></p>`).join(""):'<p class="muted">No documents uploaded.</p>'}<h3>Review</h3><label>Status<select id="reviewStatus"><option>Pending</option><option>Under Review</option><option>Approved</option><option>Rejected</option><option>More Information Required</option></select></label><label>Internal Notes<textarea id="internalNotes">${esc(a.internal_notes||"")}</textarea></label><button class="primary" onclick="saveReview(${a.id})">Save Review</button>`;$("reviewStatus").value=a.status;$("modal").classList.remove("hidden")};
-window.saveReview=async id=>{const r=await fetch("/api/admin/applications/"+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:$("reviewStatus").value,internalNotes:$("internalNotes").value})});if(r.ok){$("modal").classList.add("hidden");loadApplications();loadDashboard()}};
-$("closeModal").onclick=()=>$("modal").classList.add("hidden");
-async function loadAdminCategories(){const rows=await fetch("/api/admin/categories").then(r=>r.json());$("categoryAdmin").innerHTML=rows.map(c=>`<button class="chip ${c.active?"":"off"}" onclick="toggleCategory(${c.id},${c.active?0:1})">${esc(c.name)}</button>`).join("")}
-$("addCategoryBtn").onclick=async()=>{const name=$("newCategory").value.trim();if(!name)return;const r=await fetch("/api/admin/categories",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name})});if(r.ok){$("newCategory").value="";loadAdminCategories();loadCategories()}};
-window.toggleCategory=async(id,active)=>{await fetch("/api/admin/categories/"+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({active:!!active})});loadAdminCategories();loadCategories()};
-function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
-if("serviceWorker"in navigator)navigator.serviceWorker.register("/service-worker.js");
+// ============================================================
+// TAPA MEMBERSHIP PORTAL - FRONT END
+// Matches current Cloudflare worker.js
+// ============================================================
+
+const $ = (id) => document.getElementById(id);
+
+const esc = (value = "") =>
+  String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+let currentApplicationId = null;
+
+
+// ============================================================
+// PAGE NAVIGATION
+// ============================================================
+
+const views = ["home", "apply", "status", "admin"];
+
+window.openView = function (id) {
+  views.forEach((view) => {
+    const el = $(view);
+
+    if (el) {
+      el.classList.toggle("hidden", view !== id);
+    }
+  });
+
+  document
+    .querySelectorAll(".nav[data-view]")
+    .forEach((button) => {
+      button.classList.toggle(
+        "active",
+        button.dataset.view === id
+      );
+    });
+
+  if (id === "admin") {
+    checkAdmin();
+  }
+};
+
+
+document
+  .querySelectorAll(".nav[data-view]")
+  .forEach((button) => {
+    button.onclick = () =>
+      openView(button.dataset.view);
+  });
+
+
+// ============================================================
+// SHARE
+// ============================================================
+
+const shareBtn = $("shareBtn");
+
+if (shareBtn) {
+  shareBtn.onclick = async () => {
+    const data = {
+      title: "TAPA Membership Portal",
+
+      text:
+        "Complete your Tobago Agro Processors Association membership registration.",
+
+      url: window.location.href
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(data);
+      } else {
+        await navigator.clipboard.writeText(
+          window.location.href
+        );
+
+        alert(
+          "Portal link copied to clipboard."
+        );
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+}
+
+
+// ============================================================
+// PUBLIC PROCESSOR GROUPS
+// ============================================================
+
+async function loadCategories() {
+  const categoryList =
+    $("categoryList");
+
+  if (!categoryList) return;
+
+  try {
+    const response =
+      await fetch(
+        "/api/public/categories"
+      );
+
+    const categories =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        categories.error ||
+        "Could not load processor groups."
+      );
+    }
+
+    categoryList.innerHTML =
+      categories
+        .map(
+          (category) => `
+            <label class="check">
+              <input
+                type="checkbox"
+                name="categories"
+                value="${esc(category.name)}"
+              >
+              ${esc(category.name)}
+            </label>
+          `
+        )
+        .join("");
+
+  } catch (err) {
+    console.error(
+      "Category load error:",
+      err
+    );
+
+    categoryList.innerHTML =
+      `<div class="message">
+        Unable to load processor groups.
+      </div>`;
+  }
+}
+
+
+// ============================================================
+// CREDENTIAL / CERTIFICATE OPTIONS
+// ============================================================
+
+const credentials = [
+  "Food Badge",
+  "Farmers Badge",
+  "Agro-processing Badge",
+  "Free Sale Certificate",
+  "Food Safety Training",
+  "GMP",
+  "HACCP",
+  "Other"
+];
+
+const credentialList =
+  $("credentialList");
+
+if (credentialList) {
+  credentialList.innerHTML =
+    credentials
+      .map(
+        (item) => `
+          <label class="check">
+            <input
+              type="checkbox"
+              name="credentials"
+              value="${esc(item)}"
+            >
+            ${esc(item)}
+          </label>
+        `
+      )
+      .join("");
+}
+
+
+// ============================================================
+// MEMBERSHIP APPLICATION
+// ============================================================
+
+const applicationForm =
+  $("applicationForm");
+
+if (applicationForm) {
+  applicationForm.onsubmit =
+    async (event) => {
+      event.preventDefault();
+
+      const formMsg =
+        $("formMsg");
+
+      if (formMsg) {
+        formMsg.innerHTML =
+          `<div class="message">
+            Submitting registration...
+          </div>`;
+      }
+
+      try {
+        const formData =
+          new FormData(
+            applicationForm
+          );
+
+        const response =
+          await fetch(
+            "/api/applications",
+            {
+              method: "POST",
+              body: formData
+            }
+          );
+
+        const result =
+          await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            result.error ||
+            "Registration failed."
+          );
+        }
+
+        if (formMsg) {
+          formMsg.innerHTML = `
+            <div class="message success">
+              <strong>
+                Registration submitted.
+              </strong>
+              <br>
+              Your application number is
+              <strong>
+                ${esc(
+                  result.application_no ||
+                  result.applicationNo
+                )}
+              </strong>.
+              Save it to check your status.
+            </div>
+          `;
+        }
+
+        applicationForm.reset();
+
+        await loadCategories();
+
+      } catch (err) {
+        console.error(
+          "Application error:",
+          err
+        );
+
+        if (formMsg) {
+          formMsg.innerHTML = `
+            <div class="message error">
+              ${esc(err.message)}
+            </div>
+          `;
+        }
+      }
+    };
+}
+
+
+// ============================================================
+// CHECK APPLICATION STATUS
+// ============================================================
+
+const checkStatusBtn =
+  $("checkStatusBtn");
+
+if (checkStatusBtn) {
+  checkStatusBtn.onclick =
+    async () => {
+
+      const applicationNo =
+        $("applicationNo")?.value?.trim() ||
+        $("statusApplicationNo")
+          ?.value?.trim() ||
+        "";
+
+      const email =
+        $("statusEmail")
+          ?.value?.trim() ||
+        $("checkEmail")
+          ?.value?.trim() ||
+        "";
+
+      const statusMsg =
+        $("statusMsg") ||
+        $("statusResult");
+
+      if (
+        !applicationNo ||
+        !email
+      ) {
+        if (statusMsg) {
+          statusMsg.innerHTML =
+            `<div class="message error">
+              Enter your application number and email.
+            </div>`;
+        }
+
+        return;
+      }
+
+      try {
+        const response =
+          await fetch(
+            "/api/status",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body:
+                JSON.stringify({
+                  applicationNo,
+                  email
+                })
+            }
+          );
+
+        const result =
+          await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            result.error ||
+            "Application not found."
+          );
+        }
+
+        if (statusMsg) {
+          statusMsg.innerHTML = `
+            <div class="message">
+              <strong>
+                ${esc(
+                  result.business_name ||
+                  result.full_name ||
+                  "Application"
+                )}
+              </strong>
+              <br>
+
+              ${esc(
+                result.application_no
+              )}
+
+              <br>
+
+              Status:
+              <strong>
+                ${esc(result.status)}
+              </strong>
+
+              ${
+                result.primary_group
+                  ? `<br>
+                     Primary Group:
+                     ${esc(
+                       result.primary_group
+                     )}`
+                  : ""
+              }
+            </div>
+          `;
+        }
+
+      } catch (err) {
+        if (statusMsg) {
+          statusMsg.innerHTML = `
+            <div class="message error">
+              ${esc(err.message)}
+            </div>
+          `;
+        }
+      }
+    };
+}
+
+
+// ============================================================
+// ADMIN AUTHENTICATION
+// ============================================================
+
+async function checkAdmin() {
+  try {
+    const response =
+      await fetch(
+        "/api/admin/me",
+        {
+          credentials:
+            "same-origin"
+        }
+      );
+
+    const result =
+      await response.json();
+
+    const loggedIn =
+      response.ok &&
+      result.authenticated === true;
+
+    $("adminLogin")
+      ?.classList.toggle(
+        "hidden",
+        loggedIn
+      );
+
+    $("adminPanel")
+      ?.classList.toggle(
+        "hidden",
+        !loggedIn
+      );
+
+    if (loggedIn) {
+      await Promise.all([
+        loadDashboard(),
+        loadApplications(),
+        loadAdminCategories()
+      ]);
+    }
+
+  } catch (err) {
+    console.error(
+      "Admin check:",
+      err
+    );
+
+    $("adminLogin")
+      ?.classList.remove(
+        "hidden"
+      );
+
+    $("adminPanel")
+      ?.classList.add(
+        "hidden"
+      );
+  }
+}
+
+
+// ============================================================
+// ADMIN LOGIN
+// ============================================================
+
+const loginBtn =
+  $("loginBtn");
+
+if (loginBtn) {
+  loginBtn.onclick =
+    async () => {
+
+      const email =
+        $("adminEmail")
+          ?.value?.trim() ||
+        $("loginEmail")
+          ?.value?.trim() ||
+        "";
+
+      const password =
+        $("adminPassword")
+          ?.value ||
+        $("loginPassword")
+          ?.value ||
+        "";
+
+      const loginMsg =
+        $("loginMsg") ||
+        $("adminLoginMsg");
+
+      try {
+        const response =
+          await fetch(
+            "/api/admin/login",
+            {
+              method: "POST",
+
+              credentials:
+                "same-origin",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body:
+                JSON.stringify({
+                  email,
+                  password
+                })
+            }
+          );
+
+        const result =
+          await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            result.error ||
+            "Invalid email or password."
+          );
+        }
+
+        if (loginMsg) {
+          loginMsg.textContent =
+            "";
+        }
+
+        if ($("adminPassword")) {
+          $("adminPassword").value =
+            "";
+        }
+
+        if ($("loginPassword")) {
+          $("loginPassword").value =
+            "";
+        }
+
+        await checkAdmin();
+
+      } catch (err) {
+        if (loginMsg) {
+          loginMsg.textContent =
+            err.message;
+        }
+      }
+    };
+}
+
+
+// ============================================================
+// ADMIN LOGOUT
+// ============================================================
+
+const logoutBtn =
+  $("logoutBtn");
+
+if (logoutBtn) {
+  logoutBtn.onclick =
+    async () => {
+
+      await fetch(
+        "/api/admin/logout",
+        {
+          method: "POST",
+          credentials:
+            "same-origin"
+        }
+      );
+
+      await checkAdmin();
+    };
+}
+
+
+// ============================================================
+// ADMIN DASHBOARD COUNTS
+// ============================================================
+
+async function loadDashboard() {
+  try {
+    const response =
+      await fetch(
+        "/api/admin/summary",
+        {
+          credentials:
+            "same-origin"
+        }
+      );
+
+    const result =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        result.error ||
+        "Unable to load dashboard."
+      );
+    }
+
+    setText(
+      "stTotal",
+      result.total
+    );
+
+    setText(
+      "stPending",
+      result.pending
+    );
+
+    setText(
+      "stReview",
+      result.underReview
+    );
+
+    setText(
+      "stUnderReview",
+      result.underReview
+    );
+
+    setText(
+      "stApproved",
+      result.approved
+    );
+
+    setText(
+      "stRejected",
+      result.rejected
+    );
+
+  } catch (err) {
+    console.error(
+      "Dashboard error:",
+      err
+    );
+  }
+}
+
+
+// ============================================================
+// ADMIN APPLICATION LIST
+// ============================================================
+
+async function loadApplications() {
+  const search =
+    $("searchApps")
+      ?.value?.trim() || "";
+
+  const status =
+    $("filterStatus")
+      ?.value?.trim() || "";
+
+  const query =
+    new URLSearchParams();
+
+  if (search) {
+    query.set(
+      "search",
+      search
+    );
+  }
+
+  if (
+    status &&
+    status !== "All statuses"
+  ) {
+    query.set(
+      "status",
+      status
+    );
+  }
+
+  try {
+    const response =
+      await fetch(
+        `/api/admin/applications?${query.toString()}`,
+        {
+          credentials:
+            "same-origin"
+        }
+      );
+
+    const applications =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        applications.error ||
+        "Unable to load applications."
+      );
+    }
+
+    renderApplications(
+      applications
+    );
+
+  } catch (err) {
+    console.error(
+      "Application list error:",
+      err
+    );
+  }
+}
+
+
+function renderApplications(
+  applications
+) {
+  const tbody =
+    $("applicationRows") ||
+    $("applicationsRows") ||
+    $("applicationList") ||
+    document.querySelector(
+      "#adminPanel tbody"
+    );
+
+  if (!tbody) {
+    console.warn(
+      "Application table body not found."
+    );
+
+    return;
+  }
+
+  if (
+    !applications ||
+    applications.length === 0
+  ) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6">
+          No applications found.
+        </td>
+      </tr>
+    `;
+
+    return;
+  }
+
+  tbody.innerHTML =
+    applications
+      .map(
+        (app) => `
+          <tr>
+            <td>
+              ${esc(
+                app.application_no
+              )}
+            </td>
+
+            <td>
+              ${esc(
+                app.full_name
+              )}
+            </td>
+
+            <td>
+              ${esc(
+                app.business_name ||
+                "-"
+              )}
+            </td>
+
+            <td>
+              ${esc(
+                app.primary_group ||
+                "-"
+              )}
+            </td>
+
+            <td>
+              <strong>
+                ${esc(
+                  app.status
+                )}
+              </strong>
+            </td>
+
+            <td>
+              <button
+                type="button"
+                class="btn review-btn"
+                data-id="${Number(
+                  app.id
+                )}"
+              >
+                Review
+              </button>
+            </td>
+          </tr>
+        `
+      )
+      .join("");
+
+  tbody
+    .querySelectorAll(
+      ".review-btn"
+    )
+    .forEach((button) => {
+      button.addEventListener(
+        "click",
+        () => {
+          window.viewApp(
+            Number(
+              button.dataset.id
+            )
+          );
+        }
+      );
+    });
+}
+
+
+// ============================================================
+// SEARCH APPLICATIONS
+// ============================================================
+
+const searchBtn =
+  $("searchBtn");
+
+if (searchBtn) {
+  searchBtn.onclick =
+    loadApplications;
+}
+
+
+if ($("searchApps")) {
+  $("searchApps")
+    .addEventListener(
+      "keydown",
+      (event) => {
+        if (
+          event.key === "Enter"
+        ) {
+          event.preventDefault();
+
+          loadApplications();
+        }
+      }
+    );
+}
+
+
+if ($("filterStatus")) {
+  $("filterStatus")
+    .addEventListener(
+      "change",
+      loadApplications
+    );
+}
+
+
+// ============================================================
+// REVIEW APPLICATION
+// ============================================================
+
+window.viewApp =
+  async function (id) {
+
+    currentApplicationId =
+      Number(id);
+
+    try {
+      const response =
+        await fetch(
+          `/api/admin/applications/${currentApplicationId}`,
+          {
+            credentials:
+              "same-origin"
+          }
+        );
+
+      const app =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          app.error ||
+          "Could not open application."
+        );
+      }
+
+      openApplicationModal(app);
+
+    } catch (err) {
+      console.error(
+        "Review error:",
+        err
+      );
+
+      alert(err.message);
+    }
+  };
+
+
+// ============================================================
+// APPLICATION REVIEW MODAL
+// ============================================================
+
+function openApplicationModal(app) {
+  let modal =
+    $("modal");
+
+  if (!modal) {
+    modal =
+      document.createElement(
+        "div"
+      );
+
+    modal.id = "modal";
+    modal.className = "modal";
+
+    modal.innerHTML = `
+      <div class="modal-card">
+        <button
+          type="button"
+          id="dynamicCloseModal"
+          style="
+            float:right;
+            cursor:pointer;
+          "
+        >
+          ×
+        </button>
+
+        <div id="modalBody"></div>
+      </div>
+    `;
+
+    document.body.appendChild(
+      modal
+    );
+  }
+
+  const modalBody =
+    $("modalBody");
+
+  if (!modalBody) {
+    alert(
+      "Review window is missing from the page."
+    );
+
+    return;
+  }
+
+  const fields = [
+    ["Application", app.application_no],
+    ["Status", app.status],
+    ["Full Name", app.full_name],
+    ["Gender", app.gender],
+    ["Age Group", app.age_group],
+    ["ID Number", app.id_number],
+    ["Address", app.address],
+    ["Mailing Address", app.mailing_address],
+    ["Phone", app.phone],
+    ["Email", app.email],
+    ["Registered Business", app.registered_business],
+    ["Business Name", app.business_name],
+    ["Business Type", app.business_type],
+    ["Business Description", app.business_description],
+    ["Categories", app.categories],
+    ["Primary Group", app.primary_group],
+    ["Products", app.products],
+    ["Years in Business", app.years_business],
+    ["Credentials", app.credentials],
+    ["Support Needed", app.support_needed],
+    ["Expectations", app.expectations],
+    ["Signature", app.signature_name],
+    ["Submitted", app.created_at]
+  ];
+
+  modalBody.innerHTML = `
+    <h2>
+      Review Application
+    </h2>
+
+    <div class="review-details">
+      ${fields
+        .map(
+          ([label, value]) => `
+            <div
+              style="
+                margin-bottom:10px;
+                padding-bottom:8px;
+                border-bottom:1px solid #ddd;
+              "
+            >
+              <strong>
+                ${esc(label)}
+              </strong>
+              <br>
+              ${esc(
+                value ||
+                "-"
+              )}
+            </div>
+          `
+        )
+        .join("")}
+    </div>
+
+    ${
+      app.documents &&
+      app.documents.length
+        ? `
+          <h3>Documents</h3>
+
+          <ul>
+            ${app.documents
+              .map(
+                (doc) => `
+                  <li>
+                    ${esc(
+                      doc.original_name
+                    )}
+                  </li>
+                `
+              )
+              .join("")}
+          </ul>
+        `
+        : ""
+    }
+
+    <hr>
+
+    <label>
+      <strong>
+        Application Status
+      </strong>
+    </label>
+
+    <select
+      id="reviewStatus"
+      style="
+        width:100%;
+        margin-top:6px;
+        margin-bottom:15px;
+      "
+    >
+      ${[
+        "Pending",
+        "Under Review",
+        "Approved",
+        "Rejected"
+      ]
+        .map(
+          (status) => `
+            <option
+              value="${status}"
+              ${
+                app.status ===
+                status
+                  ? "selected"
+                  : ""
+              }
+            >
+              ${status}
+            </option>
+          `
+        )
+        .join("")}
+    </select>
+
+    <label>
+      <strong>
+        Internal Notes
+      </strong>
+    </label>
+
+    <textarea
+      id="reviewNotes"
+      rows="5"
+      style="
+        width:100%;
+        margin-top:6px;
+        margin-bottom:15px;
+      "
+    >${esc(
+      app.internal_notes ||
+      ""
+    )}</textarea>
+
+    <div
+      style="
+        display:flex;
+        gap:10px;
+        flex-wrap:wrap;
+      "
+    >
+      <button
+        type="button"
+        id="dynamicSaveReview"
+        class="btn"
+      >
+        Save Review
+      </button>
+
+      <button
+        type="button"
+        id="dynamicCloseReview"
+        class="btn"
+      >
+        Close
+      </button>
+    </div>
+
+    <div
+      id="reviewMessage"
+      style="margin-top:10px;"
+    ></div>
+  `;
+
+  modal.classList.remove(
+    "hidden"
+  );
+
+  modal.style.display =
+    "block";
+
+  $("dynamicSaveReview")
+    ?.addEventListener(
+      "click",
+      saveReview
+    );
+
+  $("dynamicCloseReview")
+    ?.addEventListener(
+      "click",
+      closeReviewModal
+    );
+
+  $("dynamicCloseModal")
+    ?.addEventListener(
+      "click",
+      closeReviewModal
+    );
+
+  $("closeModal")
+    ?.addEventListener(
+      "click",
+      closeReviewModal
+    );
+}
+
+
+// ============================================================
+// SAVE REVIEW
+// ============================================================
+
+async function saveReview() {
+  if (!currentApplicationId) {
+    return;
+  }
+
+  const status =
+    $("reviewStatus")
+      ?.value ||
+    "Pending";
+
+  const internalNotes =
+    $("reviewNotes")
+      ?.value ||
+    "";
+
+  const message =
+    $("reviewMessage");
+
+  if (message) {
+    message.textContent =
+      "Saving...";
+  }
+
+  try {
+    const response =
+      await fetch(
+        `/api/admin/applications/${currentApplicationId}`,
+        {
+          method: "PATCH",
+
+          credentials:
+            "same-origin",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body:
+            JSON.stringify({
+              status,
+              internal_notes:
+                internalNotes
+            })
+        }
+      );
+
+    const result =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        result.error ||
+        "Could not save application."
+      );
+    }
+
+    if (message) {
+      message.innerHTML =
+        `<strong>
+          Saved successfully.
+        </strong>`;
+    }
+
+    await Promise.all([
+      loadDashboard(),
+      loadApplications()
+    ]);
+
+  } catch (err) {
+    console.error(
+      "Save review error:",
+      err
+    );
+
+    if (message) {
+      message.innerHTML = `
+        <span>
+          ${esc(err.message)}
+        </span>
+      `;
+    }
+  }
+}
+
+
+window.saveReview =
+  saveReview;
+
+
+// ============================================================
+// CLOSE REVIEW MODAL
+// ============================================================
+
+function closeReviewModal() {
+  const modal =
+    $("modal");
+
+  if (!modal) return;
+
+  modal.classList.add(
+    "hidden"
+  );
+
+  modal.style.display =
+    "none";
+
+  currentApplicationId =
+    null;
+}
+
+
+window.closeReviewModal =
+  closeReviewModal;
+
+
+if ($("closeModal")) {
+  $("closeModal").onclick =
+    closeReviewModal;
+}
+
+
+// ============================================================
+// PROCESSOR GROUPS IN ADMIN
+// ============================================================
+
+async function loadAdminCategories() {
+  const target =
+    $("categoryAdmin");
+
+  if (!target) return;
+
+  try {
+    const response =
+      await fetch(
+        "/api/public/categories"
+      );
+
+    const categories =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        "Could not load processor groups."
+      );
+    }
+
+    target.innerHTML =
+      categories
+        .map(
+          (category) => `
+            <span
+              class="chip"
+              style="
+                display:inline-block;
+                margin:4px;
+                padding:6px 10px;
+              "
+            >
+              ${esc(
+                category.name
+              )}
+            </span>
+          `
+        )
+        .join("");
+
+  } catch (err) {
+    console.error(
+      err
+    );
+  }
+}
+
+
+// ============================================================
+// ADD GROUP
+//
+// Current Worker does not yet have an admin category-create API.
+// This prevents the button from silently doing nothing.
+// ============================================================
+
+const addCategoryBtn =
+  $("addCategoryBtn");
+
+if (addCategoryBtn) {
+  addCategoryBtn.onclick =
+    () => {
+      alert(
+        "The membership and review system is working. Adding new processor groups will be connected next."
+      );
+    };
+}
+
+
+// ============================================================
+// EXPORT CSV
+// ============================================================
+
+const exportBtn =
+  $("exportBtn") ||
+  $("exportCSV");
+
+if (exportBtn) {
+  exportBtn.onclick =
+    () => {
+      window.location.href =
+        "/api/admin/export";
+    };
+}
+
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+function setText(
+  id,
+  value
+) {
+  const el = $(id);
+
+  if (el) {
+    el.textContent =
+      value ?? 0;
+  }
+}
+
+
+// ============================================================
+// STARTUP
+// ============================================================
+
+(async function init() {
+  await loadCategories();
+
+  // Default view
+  if ($("home")) {
+    openView("home");
+  }
+})();
