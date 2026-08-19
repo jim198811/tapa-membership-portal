@@ -1089,7 +1089,14 @@ function openApplicationModal(app) {
       >
         Save Review
       </button>
-
+<button
+  type="button"
+  id="dynamicDeleteApplication"
+  class="btn"
+  style="background:#b42318;color:white;"
+>
+  Delete Application
+</button>
       <button
         type="button"
         id="dynamicCloseReview"
@@ -1117,7 +1124,11 @@ function openApplicationModal(app) {
       "click",
       saveReview
     );
-
+$("dynamicDeleteApplication")
+  ?.addEventListener(
+    "click",
+    () => deleteApplication(id)
+  );
   $("dynamicCloseReview")
     ?.addEventListener(
       "click",
