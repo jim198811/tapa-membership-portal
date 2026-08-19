@@ -9,3 +9,8 @@ not_found_handling = "single-page-application"
 
 [vars]
 ADMIN_EMAIL = "tapatobago@gmail.com"
+
+[[d1_databases]]
+binding="DB"
+database_name="tapa-membership-db"
+database_id="a40437c7-a7a9-4450-aacb-5d8a28c0f53a"
