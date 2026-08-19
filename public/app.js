@@ -95,56 +95,56 @@ if (shareBtn) {
 // ============================================================
 
 async function loadCategories() {
-  const categoryList =
-    $("categoryList");
-
-  if (!categoryList) return;
+  const categoryList = $("categoryList");
+  const primaryGroup = $("primaryGroup");
 
   try {
-    const response =
-      await fetch(
-        "/api/public/categories"
-      );
-
-    const categories =
-      await response.json();
+    const response = await fetch("/api/public/categories");
+    const categories = await response.json();
 
     if (!response.ok) {
       throw new Error(
-        categories.error ||
-        "Could not load processor groups."
+        categories.error || "Could not load processor groups."
       );
     }
 
-    categoryList.innerHTML =
-      categories
-        .map(
-          (category) => `
-            <label class="check">
-              <input
-                type="checkbox"
-                name="categories"
-                value="${esc(category.name)}"
-              >
-              ${esc(category.name)}
-            </label>
-          `
-        )
-        .join("");
+    const groups = categories
+      .map(item => typeof item === "string" ? item : item.name)
+      .filter(Boolean);
+
+    if (categoryList) {
+      categoryList.innerHTML = groups.map(name => `
+        <label class="check">
+          <input
+            type="checkbox"
+            name="categories"
+            value="${esc(name)}"
+          >
+          ${esc(name)}
+        </label>
+      `).join("");
+    }
+
+    if (primaryGroup) {
+      primaryGroup.innerHTML = `
+        <option value="">Select Primary Processor Group</option>
+        ${groups.map(name => `
+          <option value="${esc(name)}">
+            ${esc(name)}
+          </option>
+        `).join("")}
+      `;
+    }
 
   } catch (err) {
-    console.error(
-      "Category load error:",
-      err
-    );
+    console.error("Category load error:", err);
 
-    categoryList.innerHTML =
-      `<div class="message">
-        Unable to load processor groups.
-      </div>`;
+    if (primaryGroup) {
+      primaryGroup.innerHTML =
+        `<option value="">Unable to load processor groups</option>`;
+    }
   }
 }
-
 
 // ============================================================
 // CREDENTIAL / CERTIFICATE OPTIONS
