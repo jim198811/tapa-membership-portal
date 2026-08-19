@@ -1231,6 +1231,37 @@ async function saveReview() {
 window.saveReview =
   saveReview;
 
+async function deleteApplication(id) {
+  const confirmed = confirm(
+    "Are you sure you want to permanently delete this application? This cannot be undone."
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const response = await fetch(`/api/admin/applications/${id}`, {
+      method: "DELETE"
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Unable to delete application");
+    }
+
+    alert("Application deleted successfully.");
+
+    closeReviewModal();
+    await loadAdmin();
+
+  } catch (err) {
+    console.error("Delete application error:", err);
+    alert(err.message || "Unable to delete application");
+  }
+}
+
+window.deleteApplication = deleteApplication;
+
 
 // ============================================================
 // CLOSE REVIEW MODAL
