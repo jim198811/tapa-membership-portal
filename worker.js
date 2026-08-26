@@ -58,21 +58,25 @@ async function api(request, env, url) {
    PUBLIC MEMBERSHIP VERIFICATION
 ========================================================= */
 
-const verifyMatch =
-  p.match(
-    /^\/api\/public\/verify\/([^/]+)$/
-  );
-
 if (
-  verifyMatch &&
-  request.method === "GET"
+  request.method === "GET" &&
+  p.startsWith("/api/public/verify/")
 ) {
   const membershipNo =
     decodeURIComponent(
-      verifyMatch[1]
+      p.substring(
+        "/api/public/verify/".length
+      )
     )
       .trim()
       .toUpperCase();
+
+  if (!membershipNo) {
+    return json(
+      { error: "Membership number required." },
+      400
+    );
+  }
 
   const member =
     await env.DB.prepare(
