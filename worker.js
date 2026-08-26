@@ -54,7 +54,340 @@ async function api(request, env, url) {
 
     return json(results.map(r => r.name));
   }
+/* =========================================================
+   PUBLIC MEMBERSHIP VERIFICATION
+========================================================= */
 
+const verifyMatch =
+  p.match(
+    /^\/api\/public\/verify\/([^/]+)$/
+  );
+
+if (
+  verifyMatch &&
+  request.method === "GET"
+) {
+  const membershipNo =
+    decodeURIComponent(
+      verifyMatch[1]
+    )
+      .trim()
+      .toUpperCase();
+
+  const member =
+    await env.DB.prepare(
+      `
+      SELECT
+        membership_no,
+        full_name,
+        business_name,
+        primary_group,
+        status,
+        created_at
+      FROM applications
+      WHERE membership_no = ?
+      `
+    )
+      .bind(membershipNo)
+      .first();
+
+  if (!member) {
+    return new Response(
+      `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport"
+              content="width=device-width,initial-scale=1">
+
+        <title>TAPA Membership Verification</title>
+
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            background:#f4f4f7;
+            margin:0;
+            padding:30px;
+            color:#222;
+          }
+
+          .box {
+            max-width:600px;
+            margin:60px auto;
+            background:white;
+            border-radius:18px;
+            padding:35px;
+            box-shadow:0 10px 35px rgba(0,0,0,.12);
+            text-align:center;
+          }
+
+          h1 {
+            color:#5633a8;
+          }
+
+          .invalid {
+            margin-top:25px;
+            padding:18px;
+            background:#fdecec;
+            color:#a61b1b;
+            border-radius:12px;
+            font-weight:bold;
+          }
+        </style>
+      </head>
+
+      <body>
+
+        <div class="box">
+
+          <h1>
+            TAPA Membership Verification
+          </h1>
+
+          <div class="invalid">
+            Membership record not found.
+          </div>
+
+        </div>
+
+      </body>
+      </html>
+      `,
+      {
+        status: 404,
+        headers: {
+          "content-type":
+            "text/html;charset=utf-8",
+          "cache-control":
+            "no-store"
+        }
+      }
+    );
+  }
+
+  const isActive =
+    member.status === "Approved";
+
+  const memberSince =
+    member.created_at
+      ? new Date(
+          member.created_at
+        ).getFullYear()
+      : "";
+
+  return new Response(
+    `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+
+      <meta
+        name="viewport"
+        content="width=device-width,initial-scale=1"
+      >
+
+      <title>
+        TAPA Member Verification
+      </title>
+
+      <style>
+        * {
+          box-sizing:border-box;
+        }
+
+        body {
+          margin:0;
+          padding:30px;
+          font-family:Arial,Helvetica,sans-serif;
+          background:#f2f1f7;
+          color:#20202a;
+        }
+
+        .verify-card {
+          max-width:620px;
+          margin:40px auto;
+          background:#fff;
+          border-radius:22px;
+          overflow:hidden;
+          box-shadow:
+            0 15px 45px rgba(0,0,0,.15);
+        }
+
+        .header {
+          background:#28155f;
+          color:#fff;
+          padding:30px;
+          text-align:center;
+        }
+
+        .logo {
+          width:75px;
+          height:75px;
+          margin:0 auto 15px;
+          border-radius:50%;
+          background:#fff;
+          color:#28155f;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-weight:900;
+          font-size:22px;
+        }
+
+        .header h1 {
+          margin:0;
+          font-size:24px;
+        }
+
+        .header p {
+          margin:8px 0 0;
+          opacity:.9;
+        }
+
+        .content {
+          padding:32px;
+        }
+
+        .status {
+          text-align:center;
+          padding:15px;
+          border-radius:12px;
+          font-weight:900;
+          margin-bottom:25px;
+
+          background:
+            ${isActive
+              ? "#e5f6ea"
+              : "#fdecec"};
+
+          color:
+            ${isActive
+              ? "#176b35"
+              : "#a61b1b"};
+        }
+
+        .field {
+          padding:14px 0;
+          border-bottom:1px solid #e2e2e8;
+        }
+
+        .field small {
+          display:block;
+          text-transform:uppercase;
+          letter-spacing:1px;
+          color:#777;
+          margin-bottom:5px;
+        }
+
+        .field strong {
+          font-size:18px;
+        }
+
+        .footer {
+          padding:20px 30px 30px;
+          text-align:center;
+          color:#777;
+          font-size:12px;
+        }
+      </style>
+    </head>
+
+    <body>
+
+      <div class="verify-card">
+
+        <div class="header">
+
+          <div class="logo">
+            TAPA
+          </div>
+
+          <h1>
+            Tobago Agro-Processors Association
+          </h1>
+
+          <p>
+            Official Membership Verification
+          </p>
+
+        </div>
+
+        <div class="content">
+
+          <div class="status">
+            ${
+              isActive
+                ? "✓ VALID ACTIVE MEMBER"
+                : "MEMBERSHIP NOT ACTIVE"
+            }
+          </div>
+
+          <div class="field">
+            <small>Member Name</small>
+            <strong>
+              ${escapeHtml(member.full_name)}
+            </strong>
+          </div>
+
+          <div class="field">
+            <small>Membership Number</small>
+            <strong>
+              ${escapeHtml(member.membership_no)}
+            </strong>
+          </div>
+
+          <div class="field">
+            <small>Business</small>
+            <strong>
+              ${escapeHtml(
+                member.business_name ||
+                "Not provided"
+              )}
+            </strong>
+          </div>
+
+          <div class="field">
+            <small>Processor Group</small>
+            <strong>
+              ${escapeHtml(
+                member.primary_group ||
+                "Not assigned"
+              )}
+            </strong>
+          </div>
+
+          <div class="field">
+            <small>Member Since</small>
+            <strong>
+              ${escapeHtml(memberSince)}
+            </strong>
+          </div>
+
+        </div>
+
+        <div class="footer">
+          Verified through the TAPA Digital
+          Membership & Processor Registry.
+        </div>
+
+      </div>
+
+    </body>
+    </html>
+    `,
+    {
+      headers: {
+        "content-type":
+          "text/html;charset=utf-8",
+
+        "cache-control":
+          "no-store"
+      }
+    }
+  );
+}
 
 /* =========================================================
    SUBMIT APPLICATION
@@ -1312,7 +1645,14 @@ async function scalar(
     result?.c || 0
   );
 }
-
+function escapeHtml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
 /* =========================================================
    GENERAL HELPERS
