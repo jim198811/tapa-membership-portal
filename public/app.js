@@ -939,6 +939,7 @@ function openApplicationModal(app) {
 
   const fields = [
     ["Application", app.application_no],
+    ["Membership Number", app.membership_no],
     ["Status", app.status],
     ["Full Name", app.full_name],
     ["Gender", app.gender],
