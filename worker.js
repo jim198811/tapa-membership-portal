@@ -480,6 +480,10 @@ async function api(request, env, url) {
 /* =========================================================
    UPDATE APPLICATION REVIEW
 ========================================================= */
+/* =========================================================
+   UPDATE APPLICATION REVIEW
+   Automatically creates membership number when approved
+========================================================= */
 
   if (
     appMatch &&
@@ -511,7 +515,9 @@ async function api(request, env, url) {
     const existing =
       await env.DB.prepare(
         `
-        SELECT id
+        SELECT
+          id,
+          membership_no
         FROM applications
         WHERE id = ?
         `
@@ -526,12 +532,55 @@ async function api(request, env, url) {
       );
     }
 
+    let membershipNo =
+      existing.membership_no || null;
+
+    /*
+      If this application is being approved
+      for the first time, generate a permanent
+      TAPA membership number.
+    */
+
+    if (
+      body.status === "Approved" &&
+      !membershipNo
+    ) {
+      const year =
+        new Date().getFullYear();
+
+      const prefix =
+        `TAPA-M-${year}-`;
+
+      const last =
+        await env.DB.prepare(
+          `
+          SELECT MAX(
+            CAST(
+              substr(membership_no, -4)
+              AS INTEGER
+            )
+          ) AS max_no
+          FROM applications
+          WHERE membership_no LIKE ?
+          `
+        )
+          .bind(`${prefix}%`)
+          .first();
+
+      const nextNumber =
+        Number(last?.max_no || 0) + 1;
+
+      membershipNo =
+        `${prefix}${String(nextNumber).padStart(4, "0")}`;
+    }
+
     await env.DB.prepare(
       `
       UPDATE applications
       SET
         status = ?,
-        internal_notes = ?
+        internal_notes = ?,
+        membership_no = ?
       WHERE id = ?
       `
     )
@@ -540,16 +589,17 @@ async function api(request, env, url) {
         String(
           body.internalNotes || ""
         ),
+        membershipNo,
         id
       )
       .run();
 
     return json({
-      ok: true
+      ok: true,
+      status: body.status,
+      membershipNo
     });
   }
-
-
 /* =========================================================
    DELETE APPLICATION
 ========================================================= */
