@@ -1263,7 +1263,10 @@ async function deleteApplication(id) {
     alert("Application deleted successfully.");
 
     closeReviewModal();
-    await loadAdmin();
+    await Promise.all([
+  loadDashboard(),
+  loadApplications()
+]);
 
   } catch (err) {
     console.error("Delete application error:", err);
