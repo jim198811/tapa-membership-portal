@@ -476,10 +476,6 @@ async function api(request, env, url) {
     return json(row);
   }
 
-
-/* =========================================================
-   UPDATE APPLICATION REVIEW
-========================================================= */
 /* =========================================================
    UPDATE APPLICATION REVIEW
    Automatically creates membership number when approved
@@ -600,9 +596,6 @@ async function api(request, env, url) {
       membershipNo
     });
   }
-/* =========================================================
-   DELETE APPLICATION
-========================================================= */
 
   if (
     appMatch &&
