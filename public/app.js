@@ -1164,7 +1164,7 @@ $("dynamicDeleteApplication")
 // ============================================================
 // MEMBERSHIP CARD
 // ============================================================
-function openMembershipCard(app) {
+async function openMembershipCard(app)  {
   if (
     app.status !== "Approved" ||
     !app.membership_no
@@ -1191,7 +1191,55 @@ function openMembershipCard(app) {
 
   const membershipNo =
     app.membership_no;
+const verificationUrl =
+  `${window.location.origin}/api/public/verify/` +
+  encodeURIComponent(membershipNo);
 
+let qrDataUrl = "";
+
+try {
+  const qrHolder =
+    document.createElement("div");
+
+  qrHolder.style.position = "fixed";
+  qrHolder.style.left = "-9999px";
+  qrHolder.style.top = "-9999px";
+
+  document.body.appendChild(qrHolder);
+
+  new QRCode(qrHolder, {
+    text: verificationUrl,
+    width: 180,
+    height: 180,
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  await new Promise(
+    resolve => setTimeout(resolve, 150)
+  );
+
+  const qrCanvas =
+    qrHolder.querySelector("canvas");
+
+  const qrImage =
+    qrHolder.querySelector("img");
+
+  if (qrCanvas) {
+    qrDataUrl =
+      qrCanvas.toDataURL("image/png");
+  } else if (qrImage) {
+    qrDataUrl =
+      qrImage.src;
+  }
+
+  qrHolder.remove();
+
+} catch (error) {
+  console.error(
+    "QR code generation failed:",
+    error
+  );
+}
   const html = `
 <!DOCTYPE html>
 <html>
@@ -1441,24 +1489,38 @@ function openMembershipCard(app) {
       line-height: 1.5;
     }
 
-    .qr-placeholder {
-      width: 95px;
-      height: 95px;
+    .qr-box {
+  width: 112px;
 
-      border: 2px dashed #8d7bb8;
-      border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 
-      display: flex;
-      align-items: center;
-      justify-content: center;
+  text-align: center;
+}
 
-      text-align: center;
+.qr-box img {
+  width: 94px;
+  height: 94px;
 
-      color: #5633a8;
+  display: block;
+  background: white;
+  padding: 4px;
 
-      font-size: 10px;
-      font-weight: 900;
-    }
+  border-radius: 7px;
+  border: 1px solid #d7d2e3;
+}
+
+.qr-box span {
+  display: block;
+  margin-top: 5px;
+
+  color: #5633a8;
+
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .7px;
+}
 
     .actions {
       text-align: center;
@@ -1643,11 +1705,28 @@ function openMembershipCard(app) {
 
           </div>
 
-          <div class="qr-placeholder">
-            QR CODE
-            <br>
-            VERIFY
-          </div>
+         <div class="qr-box">
+
+  ${
+    qrDataUrl
+      ? `
+        <img
+          src="${qrDataUrl}"
+          alt="Verify TAPA Membership"
+        >
+
+        <span>
+          SCAN TO VERIFY
+        </span>
+      `
+      : `
+        <span>
+          Verification QR unavailable
+        </span>
+      `
+  }
+
+</div>
 
         </div>
 
