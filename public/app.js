@@ -1164,9 +1164,7 @@ $("dynamicDeleteApplication")
 // ============================================================
 // MEMBERSHIP CARD
 // ============================================================
-
 function openMembershipCard(app) {
-
   if (
     app.status !== "Approved" ||
     !app.membership_no
@@ -1182,325 +1180,535 @@ function openMembershipCard(app) {
       ? new Date(app.created_at).getFullYear()
       : new Date().getFullYear();
 
+  const memberName =
+    app.full_name || "Member";
+
   const businessName =
     app.business_name || "Not provided";
 
   const processorGroup =
     app.primary_group || "Not assigned";
 
-  const cardWindow =
-    window.open("", "_blank");
+  const membershipNo =
+    app.membership_no;
 
-  if (!cardWindow) {
-    alert(
-      "Please allow pop-ups for this website to open the membership card."
-    );
-    return;
-  }
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
 
-  cardWindow.document.write(`
-    <!DOCTYPE html>
-    <html>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
 
-    <head>
+  <title>
+    TAPA Membership Card - ${esc(memberName)}
+  </title>
 
-      <meta charset="UTF-8">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
 
-      <title>
-        TAPA Membership Card
-      </title>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #ececf1;
+      color: #222;
+    }
 
-      <style>
+    body {
+      padding: 30px;
+    }
 
-        * {
-          box-sizing: border-box;
-        }
+    .card-wrap {
+      display: flex;
+      justify-content: center;
+    }
 
-        body {
-          font-family: Arial, Helvetica, sans-serif;
-          background: #eeeeee;
-          margin: 0;
-          padding: 40px;
-          color: #222;
-        }
+    .member-card {
+      width: 856px;
+      min-height: 540px;
+      position: relative;
+      overflow: hidden;
 
-        .membership-card {
-          width: 850px;
-          max-width: 100%;
-          margin: 0 auto;
-          background: white;
-          border-radius: 22px;
-          overflow: hidden;
-          box-shadow: 0 12px 40px rgba(0,0,0,0.18);
-          border: 1px solid #ddd;
-        }
+      background:
+        linear-gradient(
+          135deg,
+          #ffffff 0%,
+          #faf9ff 55%,
+          #f1edfb 100%
+        );
 
-        .card-header {
-          background: #5633a8;
-          color: white;
-          padding: 32px 40px;
-        }
+      border-radius: 28px;
+      border: 1px solid #d8d3e8;
 
-        .card-header h1 {
-          margin: 0;
-          font-size: 30px;
-        }
+      box-shadow:
+        0 18px 50px rgba(0,0,0,.20);
+    }
 
-        .card-header p {
-          margin: 8px 0 0;
-          font-size: 17px;
-        }
+    .top-band {
+      padding: 28px 34px;
 
-        .card-body {
-          padding: 36px 40px;
-        }
+      background:
+        linear-gradient(
+          135deg,
+          #28155f,
+          #5633a8,
+          #744ec4
+        );
 
-        .official-member {
-          color: #5633a8;
-          font-weight: bold;
-          text-transform: uppercase;
-          letter-spacing: 2px;
-          margin-bottom: 12px;
-        }
+      color: white;
 
-        .member-name {
-          font-size: 36px;
-          font-weight: bold;
-          margin-bottom: 25px;
-        }
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
-        .membership-number {
-          background: #f2effb;
-          border-left: 6px solid #5633a8;
-          padding: 18px 20px;
-          margin-bottom: 28px;
-        }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
 
-        .membership-number small {
-          display: block;
-          color: #666;
-          margin-bottom: 5px;
-        }
+    .logo-box {
+      width: 82px;
+      height: 82px;
 
-        .membership-number strong {
-          color: #5633a8;
-          font-size: 26px;
-        }
+      border-radius: 18px;
 
-        .card-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 22px;
-        }
+      background:
+        rgba(255,255,255,.16);
 
-        .card-field {
-          border-bottom: 1px solid #ddd;
-          padding-bottom: 12px;
-        }
+      border:
+        2px solid rgba(255,255,255,.45);
 
-        .card-field small {
-          display: block;
-          color: #777;
-          margin-bottom: 5px;
-        }
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
-        .card-field strong {
-          font-size: 17px;
-        }
+      font-size: 27px;
+      font-weight: 900;
+    }
 
-        .card-footer {
-          margin-top: 30px;
-          padding-top: 20px;
-          border-top: 1px solid #ddd;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
+    .brand-text h1 {
+      margin: 0;
+      font-size: 26px;
+      line-height: 1.15;
+    }
 
-        .active-member {
-          background: #e8f5e9;
-          color: #137333;
-          padding: 8px 14px;
-          border-radius: 20px;
-          font-weight: bold;
-        }
+    .brand-text p {
+      margin: 7px 0 0;
 
-        .card-actions {
-          text-align: center;
-          margin-top: 25px;
-        }
+      font-size: 13px;
+      letter-spacing: 1.5px;
 
-        .card-actions button {
-          border: 0;
-          border-radius: 8px;
-          padding: 12px 20px;
-          margin: 5px;
-          cursor: pointer;
-          font-size: 15px;
-          font-weight: bold;
-        }
+      text-transform: uppercase;
+    }
 
-        .print-button {
-          background: #5633a8;
-          color: white;
-        }
+    .active-badge {
+      background: white;
+      color: #21733b;
 
-        .close-button {
-          background: #dddddd;
-          color: #222;
-        }
+      padding: 10px 16px;
 
-        @media print {
+      border-radius: 30px;
 
-          body {
-            background: white;
-            padding: 0;
-          }
+      font-size: 12px;
+      font-weight: 900;
 
-          .membership-card {
-            box-shadow: none;
-          }
+      white-space: nowrap;
+    }
 
-          .card-actions {
-            display: none;
-          }
+    .content {
+      padding: 34px 38px;
+    }
 
-        }
+    .official-label {
+      color: #6e6590;
 
-      </style>
+      font-size: 12px;
+      font-weight: 900;
 
-    </head>
+      letter-spacing: 1.7px;
+      text-transform: uppercase;
+    }
 
-    <body>
+    .member-name {
+      margin-top: 7px;
+      margin-bottom: 25px;
 
-      <div class="membership-card">
+      color: #231a3e;
 
-        <div class="card-header">
+      font-size: 36px;
+      font-weight: 900;
+    }
 
-          <h1>
-            Tobago Agro-Processors Association
-          </h1>
+    .membership-strip {
+      padding: 17px 20px;
+      margin-bottom: 28px;
 
-          <p>
-            Official Membership Identification
-          </p>
+      background: #eee9fb;
+
+      border-radius: 14px;
+      border-left: 6px solid #5633a8;
+
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .label {
+      color: #71678c;
+
+      font-size: 11px;
+      font-weight: 800;
+
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .number {
+      margin-top: 4px;
+
+      color: #5633a8;
+
+      font-size: 24px;
+      font-weight: 900;
+    }
+
+    .member-since {
+      text-align: right;
+    }
+
+    .member-since strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 18px;
+    }
+
+    .details {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+
+      gap: 20px 28px;
+    }
+
+    .detail {
+      padding-bottom: 12px;
+
+      border-bottom:
+        1px solid #ddd8e8;
+    }
+
+    .detail span {
+      display: block;
+      margin-bottom: 5px;
+
+      color: #777184;
+
+      font-size: 11px;
+      font-weight: 800;
+
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .detail strong {
+      font-size: 17px;
+    }
+
+    .footer {
+      margin-top: 28px;
+      padding-top: 18px;
+
+      border-top:
+        1px solid #d8d3e3;
+
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-text {
+      color: #675f74;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .qr-placeholder {
+      width: 95px;
+      height: 95px;
+
+      border: 2px dashed #8d7bb8;
+      border-radius: 12px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      text-align: center;
+
+      color: #5633a8;
+
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .actions {
+      text-align: center;
+      margin-top: 24px;
+    }
+
+    .actions button {
+      margin: 5px;
+      padding: 12px 20px;
+
+      border: 0;
+      border-radius: 9px;
+
+      cursor: pointer;
+
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .print {
+      background: #5633a8;
+      color: white;
+    }
+
+    .close {
+      background: #dddddd;
+      color: #222;
+    }
+
+    @media print {
+      body {
+        padding: 0;
+        background: white;
+      }
+
+      .member-card {
+        box-shadow: none;
+      }
+
+      .actions {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="card-wrap">
+
+    <div class="member-card">
+
+      <div class="top-band">
+
+        <div class="brand">
+
+          <div class="logo-box">
+            TAPA
+          </div>
+
+          <div class="brand-text">
+
+            <h1>
+              Tobago Agro-Processors Association
+            </h1>
+
+            <p>
+              Official Membership Card
+            </p>
+
+          </div>
 
         </div>
 
-        <div class="card-body">
+        <div class="active-badge">
+          ACTIVE MEMBER
+        </div>
 
-          <div class="official-member">
-            Official Member
-          </div>
+      </div>
 
-          <div class="member-name">
-            ${esc(app.full_name)}
-          </div>
+      <div class="content">
 
-          <div class="membership-number">
+        <div class="official-label">
+          Official Member
+        </div>
 
-            <small>
+        <div class="member-name">
+          ${esc(memberName)}
+        </div>
+
+        <div class="membership-strip">
+
+          <div>
+
+            <div class="label">
               Membership Number
-            </small>
+            </div>
+
+            <div class="number">
+              ${esc(membershipNo)}
+            </div>
+
+          </div>
+
+          <div class="member-since">
+
+            <div class="label">
+              Member Since
+            </div>
 
             <strong>
-              ${esc(app.membership_no)}
+              ${esc(memberSince)}
             </strong>
 
           </div>
 
-          <div class="card-grid">
+        </div>
 
-            <div class="card-field">
+        <div class="details">
 
-              <small>
-                Business
-              </small>
+          <div class="detail">
 
-              <strong>
-                ${esc(businessName)}
-              </strong>
+            <span>
+              Business
+            </span>
 
-            </div>
-
-            <div class="card-field">
-
-              <small>
-                Processor Group
-              </small>
-
-              <strong>
-                ${esc(processorGroup)}
-              </strong>
-
-            </div>
-
-            <div class="card-field">
-
-              <small>
-                Member Since
-              </small>
-
-              <strong>
-                ${esc(memberSince)}
-              </strong>
-
-            </div>
-
-            <div class="card-field">
-
-              <small>
-                Membership Status
-              </small>
-
-              <strong>
-                Approved
-              </strong>
-
-            </div>
+            <strong>
+              ${esc(businessName)}
+            </strong>
 
           </div>
 
-          <div class="card-footer">
+          <div class="detail">
 
             <span>
+              Processor Group
+            </span>
+
+            <strong>
+              ${esc(processorGroup)}
+            </strong>
+
+          </div>
+
+          <div class="detail">
+
+            <span>
+              Membership Status
+            </span>
+
+            <strong>
+              Approved
+            </strong>
+
+          </div>
+
+          <div class="detail">
+
+            <span>
+              Membership Type
+            </span>
+
+            <strong>
+              TAPA Member
+            </strong>
+
+          </div>
+
+        </div>
+
+        <div class="footer">
+
+          <div class="footer-text">
+
+            <strong>
               Tobago Agro-Processors Association
-            </span>
+            </strong>
 
-            <span class="active-member">
-              ACTIVE MEMBER
-            </span>
+            <br>
 
+            Digital Membership & Processor Registry
+
+          </div>
+
+          <div class="qr-placeholder">
+            QR CODE
+            <br>
+            VERIFY
           </div>
 
         </div>
 
       </div>
 
-      <div class="card-actions">
+    </div>
 
-        <button
-          class="print-button"
-          onclick="window.print()"
-        >
-          Print / Save as PDF
-        </button>
+  </div>
 
-        <button
-          class="close-button"
-          onclick="window.close()"
-        >
-          Close
-        </button>
+  <div class="actions">
 
-      </div>
+    <button
+      class="print"
+      onclick="window.print()"
+    >
+      Print / Save as PDF
+    </button>
 
-    </body>
+    <button
+      class="close"
+      onclick="window.close()"
+    >
+      Close
+    </button>
 
-    </html>
-  `);
+  </div>
 
-  cardWindow.document.close();
+</body>
+</html>
+  `;
+
+  const blob = new Blob(
+    [html],
+    {
+      type: "text/html;charset=utf-8"
+    }
+  );
+
+  const cardUrl =
+    URL.createObjectURL(blob);
+
+  const cardWindow =
+    window.open(
+      cardUrl,
+      "_blank"
+    );
+
+  if (!cardWindow) {
+    URL.revokeObjectURL(cardUrl);
+
+    alert(
+      "Please allow pop-ups for this website to open the membership card."
+    );
+
+    return;
+  }
+
+  setTimeout(
+    () => URL.revokeObjectURL(cardUrl),
+    60000
+  );
 }
 
 // ============================================================
