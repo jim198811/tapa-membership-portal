@@ -1127,7 +1127,7 @@ function openApplicationModal(app) {
 $("dynamicDeleteApplication")
   ?.addEventListener(
     "click",
-    () => deleteApplication(id)
+    () => deleteApplication(app.id)
   );
   $("dynamicCloseReview")
     ?.addEventListener(
