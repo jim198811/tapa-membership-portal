@@ -76,7 +76,7 @@ if (
       { error: "Membership number required." },
       400
     );
-  }
+  
 
   const member =
     await env.DB.prepare(
