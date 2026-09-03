@@ -21,7 +21,11 @@ export default {
 
     } catch (err) {
       console.error("Worker error:", err);
-      return json({ error: "Server error." }, 500);
+
+      return json(
+        { error: "Server error." },
+        500
+      );
     }
   }
 };
@@ -43,103 +47,391 @@ async function api(request, env, url) {
     request.method === "GET" &&
     p === "/api/public/categories"
   ) {
-    const { results } = await env.DB.prepare(
-      `
-      SELECT name
-      FROM categories
-      WHERE active = 1
-      ORDER BY name
-      `
-    ).all();
+    const { results } =
+      await env.DB.prepare(
+        `
+        SELECT name
+        FROM categories
+        WHERE active = 1
+        ORDER BY name
+        `
+      ).all();
 
-    return json(results.map(r => r.name));
+    return json(
+      results.map(
+        r => r.name
+      )
+    );
   }
+
+
 /* =========================================================
    PUBLIC MEMBERSHIP VERIFICATION
 ========================================================= */
 
-if (
-  request.method === "GET" &&
-  p.startsWith("/api/public/verify/")
-) {
-  const membershipNo =
-    decodeURIComponent(
-      p.substring(
-        "/api/public/verify/".length
+  if (
+    request.method === "GET" &&
+    p.startsWith(
+      "/api/public/verify/"
+    )
+  ) {
+    const membershipNo =
+      decodeURIComponent(
+        p.substring(
+          "/api/public/verify/".length
+        )
       )
-    )
-      .trim()
-      .toUpperCase();
+        .trim()
+        .toUpperCase();
 
-  if (!membershipNo) {
-    return json(
-      { error: "Membership number required." },
-      400
-    );
-  }
+    if (!membershipNo) {
+      return json(
+        {
+          error:
+            "Membership number required."
+        },
+        400
+      );
+    }
 
-  const member =
-    await env.DB.prepare(
-      `
-      SELECT
-        membership_no,
-        full_name,
-        business_name,
-        primary_group,
-        status,
-        created_at
-      FROM applications
-      WHERE membership_no = ?
-      `
-    )
-      .bind(membershipNo)
-      .first();
+    const member =
+      await env.DB.prepare(
+        `
+        SELECT
+          membership_no,
+          full_name,
+          business_name,
+          primary_group,
+          status,
+          created_at
+        FROM applications
+        WHERE membership_no = ?
+        `
+      )
+        .bind(
+          membershipNo
+        )
+        .first();
 
-  if (!member) {
+    if (!member) {
+      return new Response(
+        `
+        <!DOCTYPE html>
+
+        <html lang="en">
+
+        <head>
+
+          <meta charset="UTF-8">
+
+          <meta
+            name="viewport"
+            content="width=device-width,initial-scale=1"
+          >
+
+          <title>
+            TAPA Membership Verification
+          </title>
+
+          <style>
+
+            body {
+              font-family:
+                Arial,
+                sans-serif;
+
+              background:
+                #f4f4f7;
+
+              margin:
+                0;
+
+              padding:
+                30px;
+
+              color:
+                #222;
+            }
+
+            .box {
+              max-width:
+                600px;
+
+              margin:
+                60px auto;
+
+              background:
+                white;
+
+              border-radius:
+                18px;
+
+              padding:
+                35px;
+
+              box-shadow:
+                0 10px 35px
+                rgba(
+                  0,
+                  0,
+                  0,
+                  .12
+                );
+
+              text-align:
+                center;
+            }
+
+            h1 {
+              color:
+                #5633a8;
+            }
+
+            .invalid {
+              margin-top:
+                25px;
+
+              padding:
+                18px;
+
+              background:
+                #fdecec;
+
+              color:
+                #a61b1b;
+
+              border-radius:
+                12px;
+
+              font-weight:
+                bold;
+            }
+
+          </style>
+
+        </head>
+
+
+        <body>
+
+          <div class="box">
+
+            <h1>
+              TAPA Membership Verification
+            </h1>
+
+            <div class="invalid">
+              Membership record not found.
+            </div>
+
+          </div>
+
+        </body>
+
+        </html>
+        `,
+        {
+          status: 404,
+
+          headers: {
+            "content-type":
+              "text/html;charset=utf-8",
+
+            "cache-control":
+              "no-store"
+          }
+        }
+      );
+    }
+
+
+    const isActive =
+      member.status ===
+      "Approved";
+
+
+    const statusMessage =
+      isActive
+        ? "✓ VALID ACTIVE MEMBER"
+        : "MEMBERSHIP NOT ACTIVE";
+
+
+    const statusClass =
+      isActive
+        ? "valid"
+        : "invalid";
+
+
+    const memberSince =
+      member.created_at
+        ? new Date(
+            member.created_at
+          ).toLocaleDateString(
+            "en-TT",
+            {
+              year:
+                "numeric",
+
+              month:
+                "long"
+            }
+          )
+        : "-";
+
+
     return new Response(
       `
       <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport"
-              content="width=device-width,initial-scale=1">
 
-        <title>TAPA Membership Verification</title>
+      <html lang="en">
+
+      <head>
+
+        <meta charset="UTF-8">
+
+        <meta
+          name="viewport"
+          content="width=device-width,initial-scale=1"
+        >
+
+        <title>
+          TAPA Membership Verification
+        </title>
 
         <style>
+
+          * {
+            box-sizing:
+              border-box;
+          }
+
           body {
-            font-family: Arial, sans-serif;
-            background:#f4f4f7;
-            margin:0;
-            padding:30px;
-            color:#222;
+            margin:
+              0;
+
+            padding:
+              30px 15px;
+
+            font-family:
+              Arial,
+              Helvetica,
+              sans-serif;
+
+            background:
+              #f4f6f4;
+
+            color:
+              #203025;
           }
 
           .box {
-            max-width:600px;
-            margin:60px auto;
-            background:white;
-            border-radius:18px;
-            padding:35px;
-            box-shadow:0 10px 35px rgba(0,0,0,.12);
-            text-align:center;
+            max-width:
+              620px;
+
+            margin:
+              45px auto;
+
+            padding:
+              32px;
+
+            background:
+              white;
+
+            border-radius:
+              18px;
+
+            box-shadow:
+              0 12px 35px
+              rgba(
+                0,
+                0,
+                0,
+                .12
+              );
           }
 
           h1 {
-            color:#5633a8;
+            color:
+              #1f6d3d;
+
+            margin-top:
+              0;
+          }
+
+          .valid,
+          .invalid {
+            margin:
+              20px 0;
+
+            padding:
+              16px;
+
+            border-radius:
+              12px;
+
+            text-align:
+              center;
+
+            font-weight:
+              800;
+
+            font-size:
+              18px;
+          }
+
+          .valid {
+            background:
+              #e7f7eb;
+
+            color:
+              #17652f;
           }
 
           .invalid {
-            margin-top:25px;
-            padding:18px;
-            background:#fdecec;
-            color:#a61b1b;
-            border-radius:12px;
-            font-weight:bold;
+            background:
+              #fdecec;
+
+            color:
+              #a61b1b;
           }
+
+          .field {
+            padding:
+              10px 0;
+
+            border-bottom:
+              1px solid #ecefec;
+          }
+
+          .label {
+            font-size:
+              12px;
+
+            color:
+              #68756b;
+
+            font-weight:
+              700;
+
+            text-transform:
+              uppercase;
+
+            margin-bottom:
+              4px;
+          }
+
+          .value {
+            font-size:
+              17px;
+
+            font-weight:
+              700;
+          }
+
         </style>
+
       </head>
+
 
       <body>
 
@@ -149,20 +441,124 @@ if (
             TAPA Membership Verification
           </h1>
 
-          <div class="invalid">
-            Membership record not found.
+
+          <div class="${statusClass}">
+            ${escapeHtml(
+              statusMessage
+            )}
+          </div>
+
+
+          <div class="field">
+
+            <div class="label">
+              Member Name
+            </div>
+
+            <div class="value">
+              ${escapeHtml(
+                member.full_name ||
+                "-"
+              )}
+            </div>
+
+          </div>
+
+
+          <div class="field">
+
+            <div class="label">
+              Membership Number
+            </div>
+
+            <div class="value">
+              ${escapeHtml(
+                member.membership_no ||
+                "-"
+              )}
+            </div>
+
+          </div>
+
+
+          <div class="field">
+
+            <div class="label">
+              Business
+            </div>
+
+            <div class="value">
+              ${escapeHtml(
+                member.business_name ||
+                "-"
+              )}
+            </div>
+
+          </div>
+
+
+          <div class="field">
+
+            <div class="label">
+              Processor Group
+            </div>
+
+            <div class="value">
+              ${escapeHtml(
+                member.primary_group ||
+                "-"
+              )}
+            </div>
+
+          </div>
+
+
+          <div class="field">
+
+            <div class="label">
+              Member Since
+            </div>
+
+            <div class="value">
+              ${escapeHtml(
+                memberSince
+              )}
+            </div>
+
+          </div>
+
+
+          <div class="field">
+
+            <div class="label">
+              Current Status
+            </div>
+
+            <div class="value">
+              ${escapeHtml(
+                member.status ||
+                "-"
+              )}
+            </div>
+
           </div>
 
         </div>
 
       </body>
+
       </html>
       `,
       {
-        status: 404,
+        status:
+          isActive
+            ? 200
+            : 403,
+
         headers: {
           "content-type":
             "text/html;charset=utf-8",
+
           "cache-control":
             "no-store"
         }
@@ -170,290 +566,99 @@ if (
     );
   }
 
-  const isActive =
-    member.status === "Approved";
-
-  const memberSince =
-    member.created_at
-      ? new Date(
-          member.created_at
-        ).getFullYear()
-      : "";
-
-  return new Response(
-    `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-
-      <meta
-        name="viewport"
-        content="width=device-width,initial-scale=1"
-      >
-
-      <title>
-        TAPA Member Verification
-      </title>
-
-      <style>
-        * {
-          box-sizing:border-box;
-        }
-
-        body {
-          margin:0;
-          padding:30px;
-          font-family:Arial,Helvetica,sans-serif;
-          background:#f2f1f7;
-          color:#20202a;
-        }
-
-        .verify-card {
-          max-width:620px;
-          margin:40px auto;
-          background:#fff;
-          border-radius:22px;
-          overflow:hidden;
-          box-shadow:
-            0 15px 45px rgba(0,0,0,.15);
-        }
-
-        .header {
-          background:#28155f;
-          color:#fff;
-          padding:30px;
-          text-align:center;
-        }
-
-        .logo {
-          width:75px;
-          height:75px;
-          margin:0 auto 15px;
-          border-radius:50%;
-          background:#fff;
-          color:#28155f;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          font-weight:900;
-          font-size:22px;
-        }
-
-        .header h1 {
-          margin:0;
-          font-size:24px;
-        }
-
-        .header p {
-          margin:8px 0 0;
-          opacity:.9;
-        }
-
-        .content {
-          padding:32px;
-        }
-
-        .status {
-          text-align:center;
-          padding:15px;
-          border-radius:12px;
-          font-weight:900;
-          margin-bottom:25px;
-
-          background:
-            ${isActive
-              ? "#e5f6ea"
-              : "#fdecec"};
-
-          color:
-            ${isActive
-              ? "#176b35"
-              : "#a61b1b"};
-        }
-
-        .field {
-          padding:14px 0;
-          border-bottom:1px solid #e2e2e8;
-        }
-
-        .field small {
-          display:block;
-          text-transform:uppercase;
-          letter-spacing:1px;
-          color:#777;
-          margin-bottom:5px;
-        }
-
-        .field strong {
-          font-size:18px;
-        }
-
-        .footer {
-          padding:20px 30px 30px;
-          text-align:center;
-          color:#777;
-          font-size:12px;
-        }
-      </style>
-    </head>
-
-    <body>
-
-      <div class="verify-card">
-
-        <div class="header">
-
-          <div class="logo">
-            TAPA
-          </div>
-
-          <h1>
-            Tobago Agro-Processors Association
-          </h1>
-
-          <p>
-            Official Membership Verification
-          </p>
-
-        </div>
-
-        <div class="content">
-
-          <div class="status">
-            ${
-              isActive
-                ? "✓ VALID ACTIVE MEMBER"
-                : "MEMBERSHIP NOT ACTIVE"
-            }
-          </div>
-
-          <div class="field">
-            <small>Member Name</small>
-            <strong>
-              ${escapeHtml(member.full_name)}
-            </strong>
-          </div>
-
-          <div class="field">
-            <small>Membership Number</small>
-            <strong>
-              ${escapeHtml(member.membership_no)}
-            </strong>
-          </div>
-
-          <div class="field">
-            <small>Business</small>
-            <strong>
-              ${escapeHtml(
-                member.business_name ||
-                "Not provided"
-              )}
-            </strong>
-          </div>
-
-          <div class="field">
-            <small>Processor Group</small>
-            <strong>
-              ${escapeHtml(
-                member.primary_group ||
-                "Not assigned"
-              )}
-            </strong>
-          </div>
-
-          <div class="field">
-            <small>Member Since</small>
-            <strong>
-              ${escapeHtml(memberSince)}
-            </strong>
-          </div>
-
-        </div>
-
-        <div class="footer">
-          Verified through the TAPA Digital
-          Membership & Processor Registry.
-        </div>
-
-      </div>
-
-    </body>
-    </html>
-    `,
-    {
-      headers: {
-        "content-type":
-          "text/html;charset=utf-8",
-
-        "cache-control":
-          "no-store"
-      }
-    }
-  );
-}
 
 /* =========================================================
-   SUBMIT APPLICATION
+   NEW MEMBERSHIP APPLICATION
 ========================================================= */
 
   if (
     request.method === "POST" &&
     p === "/api/applications"
   ) {
-    return createApplication(request, env);
+    return createApplication(
+      request,
+      env
+    );
   }
 
 
 /* =========================================================
-   CHECK APPLICATION STATUS
+   PUBLIC STATUS CHECK
 ========================================================= */
 
   if (
     request.method === "POST" &&
     p === "/api/status"
   ) {
-    const body = await request.json();
+    const body =
+      await request.json();
 
-    const no = String(
-      body.applicationNo || ""
-    )
-      .trim()
-      .toUpperCase();
+    const applicationNo =
+      String(
+        body.applicationNo ||
+        body.application_no ||
+        ""
+      )
+        .trim()
+        .toUpperCase();
 
-    const email = String(
-      body.email || ""
-    )
-      .trim()
-      .toLowerCase();
+    const email =
+      String(
+        body.email ||
+        ""
+      )
+        .trim()
+        .toLowerCase();
 
-    const row = await env.DB.prepare(
-      `
-      SELECT
-        application_no,
-        status,
-        business_name,
-        full_name,
-        primary_group,
-        created_at
-      FROM applications
-      WHERE application_no = ?
-      AND lower(email) = ?
-      `
-    )
-      .bind(no, email)
-      .first();
-
-    return row
-      ? json(row)
-      : json(
-          { error: "No matching application found." },
-          404
-        );
-  }
+    if (
+      !applicationNo ||
+      !email
+    ) {
+      return json(
+        {
+          error:
+            "Application number and email are required."
+        },
+        400
+      );
+    }
 
 
-/* =========================================================
+    const row =
+      await env.DB.prepare(
+        `
+        SELECT
+          application_no,
+          full_name,
+          business_name,
+          primary_group,
+          status
+        FROM applications
+        WHERE
+          upper(application_no) = ?
+          AND lower(email) = ?
+        `
+      )
+        .bind(
+          applicationNo,
+          email
+        )
+        .first();
+
+
+    if (!row) {
+      return json(
+        {
+          error:
+            "Application not found."
+        },
+        404
+      );
+    }
+
+
+    return json(row);
+  }/* =========================================================
    ADMIN LOGIN
 ========================================================= */
 
@@ -461,79 +666,104 @@ if (
     request.method === "POST" &&
     p === "/api/admin/login"
   ) {
-    const body = await request.json();
+    const body =
+      await request.json();
 
-    const email = String(
-      body.email || ""
-    )
-      .trim()
-      .toLowerCase();
+    const email =
+      String(
+        body.email || ""
+      )
+        .trim()
+        .toLowerCase();
 
-    const password = String(
-      body.password || ""
-    );
+    const password =
+      String(
+        body.password || ""
+      );
 
-    const expectedEmail = String(
-      env.ADMIN_EMAIL || ""
-    )
-      .trim()
-      .toLowerCase();
+    const expectedEmail =
+      String(
+        env.ADMIN_EMAIL || ""
+      )
+        .trim()
+        .toLowerCase();
 
-    const expectedPassword = String(
-      env.ADMIN_PASSWORD || ""
-    );
+    const expectedPassword =
+      String(
+        env.ADMIN_PASSWORD || ""
+      );
 
     if (
       !expectedEmail ||
       !expectedPassword ||
       email !== expectedEmail ||
-      !safeEqual(password, expectedPassword)
+      !safeEqual(
+        password,
+        expectedPassword
+      )
     ) {
       return json(
-        { error: "Invalid email or password." },
+        {
+          error:
+            "Invalid email or password."
+        },
         401
       );
     }
 
     if (!env.SESSION_SECRET) {
       return json(
-        { error: "SESSION_SECRET is not configured." },
+        {
+          error:
+            "SESSION_SECRET is not configured."
+        },
         500
       );
     }
 
     const exp =
-      Math.floor(Date.now() / 1000) +
+      Math.floor(
+        Date.now() / 1000
+      ) +
       8 * 60 * 60;
 
-    const payload = b64url(
-      JSON.stringify({
-        email,
-        exp
-      })
-    );
+    const payload =
+      b64url(
+        JSON.stringify({
+          email,
+          exp
+        })
+      );
 
-    const sig = await sign(
-      payload,
-      env.SESSION_SECRET
-    );
+    const sig =
+      await sign(
+        payload,
+        env.SESSION_SECRET
+      );
+
+    const cookie =
+      `${SESSION_COOKIE}=` +
+      `${payload}.${sig}; ` +
+      `Path=/; HttpOnly; ` +
+      `Secure; SameSite=Strict; ` +
+      `Max-Age=${8 * 60 * 60}`;
 
     return new Response(
       JSON.stringify({
-        ok: true,
-        email
+        ok: true
       }),
       {
+        status: 200,
+
         headers: {
           "content-type":
             "application/json;charset=utf-8",
 
+          "cache-control":
+            "no-store",
+
           "set-cookie":
-            `${SESSION_COOKIE}=` +
-            `${payload}.${sig}; ` +
-            `HttpOnly; Secure; ` +
-            `SameSite=Lax; Path=/; ` +
-            `Max-Age=28800`
+            cookie
         }
       }
     );
@@ -557,10 +787,13 @@ if (
           "content-type":
             "application/json;charset=utf-8",
 
+          "cache-control":
+            "no-store",
+
           "set-cookie":
             `${SESSION_COOKIE}=; ` +
-            `HttpOnly; Secure; ` +
-            `SameSite=Lax; Path=/; ` +
+            `Path=/; HttpOnly; ` +
+            `Secure; SameSite=Strict; ` +
             `Max-Age=0`
         }
       }
@@ -569,7 +802,7 @@ if (
 
 
 /* =========================================================
-   CHECK ADMIN SESSION
+   ADMIN SESSION CHECK
 ========================================================= */
 
   if (
@@ -577,30 +810,55 @@ if (
     p === "/api/admin/me"
   ) {
     const session =
-      await getSession(request, env);
+      await getSession(
+        request,
+        env
+      );
+
+    if (!session) {
+      return json(
+        {
+          authenticated:
+            false
+        },
+        401
+      );
+    }
 
     return json({
-      authenticated: !!session,
-      email: session?.email || null
+      authenticated:
+        true,
+
+      email:
+        session.email
     });
   }
 
 
 /* =========================================================
-   PROTECT ADMIN ROUTES
+   PROTECT ALL ADMIN ROUTES BELOW THIS POINT
 ========================================================= */
 
-  const session =
-    await getSession(request, env);
-
   if (
-    !session &&
-    p.startsWith("/api/admin/")
+    p.startsWith(
+      "/api/admin/"
+    )
   ) {
-    return json(
-      { error: "Unauthorized" },
-      401
-    );
+    const session =
+      await getSession(
+        request,
+        env
+      );
+
+    if (!session) {
+      return json(
+        {
+          error:
+            "Unauthorized"
+        },
+        401
+      );
+    }
   }
 
 
@@ -612,45 +870,76 @@ if (
     request.method === "GET" &&
     p === "/api/admin/dashboard"
   ) {
-    const total = await scalar(
-      env,
-      "SELECT count(*) c FROM applications"
-    );
+    const total =
+      await scalar(
+        env,
+        `
+        SELECT count(*) c
+        FROM applications
+        `
+      );
 
-    const pending = await scalar(
-      env,
-      `
-      SELECT count(*) c
-      FROM applications
-      WHERE status = 'Pending'
-      `
-    );
+    const pending =
+      await scalar(
+        env,
+        `
+        SELECT count(*) c
+        FROM applications
+        WHERE status = 'Pending'
+        `
+      );
 
-    const review = await scalar(
-      env,
-      `
-      SELECT count(*) c
-      FROM applications
-      WHERE status = 'Under Review'
-      `
-    );
+    const review =
+      await scalar(
+        env,
+        `
+        SELECT count(*) c
+        FROM applications
+        WHERE status = 'Under Review'
+        `
+      );
 
-    const approved = await scalar(
-      env,
-      `
-      SELECT count(*) c
-      FROM applications
-      WHERE status = 'Approved'
-      `
-    );
+    const approved =
+      await scalar(
+        env,
+        `
+        SELECT count(*) c
+        FROM applications
+        WHERE status = 'Approved'
+        `
+      );
+
+    const rejected =
+      await scalar(
+        env,
+        `
+        SELECT count(*) c
+        FROM applications
+        WHERE status = 'Rejected'
+        `
+      );
+
+    const moreInformationRequired =
+      await scalar(
+        env,
+        `
+        SELECT count(*) c
+        FROM applications
+        WHERE status =
+          'More Information Required'
+        `
+      );
 
     const { results: groups } =
       await env.DB.prepare(
         `
         SELECT
-          primary_group name,
-          count(*) count
+          primary_group AS name,
+          count(*) AS count
         FROM applications
+        WHERE
+          primary_group IS NOT NULL
+          AND primary_group != ''
         GROUP BY primary_group
         ORDER BY count DESC
         `
@@ -659,8 +948,17 @@ if (
     return json({
       total,
       pending,
+
       review,
+
+      underReview:
+        review,
+
       approved,
+      rejected,
+
+      moreInformationRequired,
+
       groups
     });
   }
@@ -675,17 +973,24 @@ if (
     p === "/api/admin/applications"
   ) {
     const q =
-      (url.searchParams.get("q") || "")
-        .trim();
+      (
+        url.searchParams.get(
+          "q"
+        ) || ""
+      ).trim();
 
     const status =
-      (url.searchParams.get("status") || "")
-        .trim();
+      (
+        url.searchParams.get(
+          "status"
+        ) || ""
+      ).trim();
 
     let sql = `
       SELECT
         id,
         application_no,
+        membership_no,
         created_at,
         status,
         full_name,
@@ -705,32 +1010,60 @@ if (
           full_name LIKE ?
           OR business_name LIKE ?
           OR application_no LIKE ?
+          OR membership_no LIKE ?
+          OR email LIKE ?
+          OR phone LIKE ?
         )
       `;
 
+      const like =
+        `%${q}%`;
+
       binds.push(
-        `%${q}%`,
-        `%${q}%`,
-        `%${q}%`
+        like,
+        like,
+        like,
+        like,
+        like,
+        like
       );
     }
 
-    if (status) {
-      sql += " AND status = ?";
-      binds.push(status);
+    if (
+      status &&
+      status !==
+        "All statuses"
+    ) {
+      sql += `
+        AND status = ?
+      `;
+
+      binds.push(
+        status
+      );
     }
 
-    sql += " ORDER BY id DESC";
+    sql += `
+      ORDER BY id DESC
+    `;
 
     const stmt =
-      env.DB.prepare(sql);
+      env.DB.prepare(
+        sql
+      );
 
     const { results } =
       binds.length
-        ? await stmt.bind(...binds).all()
+        ? await stmt
+            .bind(
+              ...binds
+            )
+            .all()
         : await stmt.all();
 
-    return json(results);
+    return json(
+      results
+    );
   }
 
 
@@ -753,7 +1086,9 @@ if (
     request.method === "GET"
   ) {
     const id =
-      Number(appMatch[1]);
+      Number(
+        appMatch[1]
+      );
 
     const row =
       await env.DB.prepare(
@@ -768,10 +1103,14 @@ if (
 
     if (!row) {
       return json(
-        { error: "Not found" },
+        {
+          error:
+            "Application not found."
+        },
         404
       );
     }
+
 
     row.categories =
       parseJSON(
@@ -779,17 +1118,34 @@ if (
         []
       );
 
+
     row.credentials =
       parseJSON(
         row.credentials,
         []
       );
 
+
     row.support_needs =
       parseJSON(
         row.support_needs,
         []
       );
+
+
+    row.current_markets =
+      parseJSON(
+        row.current_markets,
+        []
+      );
+
+
+    row.target_markets =
+      parseJSON(
+        row.target_markets,
+        []
+      );
+
 
     const { results: docs } =
       await env.DB.prepare(
@@ -808,14 +1164,21 @@ if (
         .bind(id)
         .all();
 
-    row.documents = docs;
 
-    return json(row);
+    row.documents =
+      docs;
+
+
+    return json(
+      row
+    );
   }
+
 
 /* =========================================================
    UPDATE APPLICATION REVIEW
-   Automatically creates membership number when approved
+   Membership number is created on first approval
+   and retained permanently.
 ========================================================= */
 
   if (
@@ -823,7 +1186,9 @@ if (
     request.method === "PATCH"
   ) {
     const id =
-      Number(appMatch[1]);
+      Number(
+        appMatch[1]
+      );
 
     const body =
       await request.json();
@@ -837,10 +1202,15 @@ if (
     ];
 
     if (
-      !allowed.includes(body.status)
+      !allowed.includes(
+        body.status
+      )
     ) {
       return json(
-        { error: "Invalid status" },
+        {
+          error:
+            "Invalid status."
+        },
         400
       );
     }
@@ -860,26 +1230,27 @@ if (
 
     if (!existing) {
       return json(
-        { error: "Application not found." },
+        {
+          error:
+            "Application not found."
+        },
         404
       );
     }
 
     let membershipNo =
-      existing.membership_no || null;
+      existing.membership_no ||
+      null;
 
-    /*
-      If this application is being approved
-      for the first time, generate a permanent
-      TAPA membership number.
-    */
 
     if (
-      body.status === "Approved" &&
+      body.status ===
+        "Approved" &&
       !membershipNo
     ) {
       const year =
-        new Date().getFullYear();
+        new Date()
+          .getFullYear();
 
       const prefix =
         `TAPA-M-${year}-`;
@@ -889,7 +1260,10 @@ if (
           `
           SELECT MAX(
             CAST(
-              substr(membership_no, -4)
+              substr(
+                membership_no,
+                -4
+              )
               AS INTEGER
             )
           ) AS max_no
@@ -897,15 +1271,35 @@ if (
           WHERE membership_no LIKE ?
           `
         )
-          .bind(`${prefix}%`)
+          .bind(
+            `${prefix}%`
+          )
           .first();
 
       const nextNumber =
-        Number(last?.max_no || 0) + 1;
+        Number(
+          last?.max_no ||
+          0
+        ) + 1;
 
       membershipNo =
-        `${prefix}${String(nextNumber).padStart(4, "0")}`;
+        `${prefix}` +
+        `${String(
+          nextNumber
+        ).padStart(
+          4,
+          "0"
+        )}`;
     }
+
+
+    const internalNotes =
+      String(
+        body.internalNotes ??
+        body.internal_notes ??
+        ""
+      );
+
 
     await env.DB.prepare(
       `
@@ -919,27 +1313,36 @@ if (
     )
       .bind(
         body.status,
-        String(
-          body.internalNotes || ""
-        ),
+        internalNotes,
         membershipNo,
         id
       )
       .run();
 
+
     return json({
       ok: true,
-      status: body.status,
-      membershipNo
+
+      status:
+        body.status,
+
+      membershipNo,
+
+      membership_no:
+        membershipNo
     });
-  }
+  }/* =========================================================
+   DELETE APPLICATION
+========================================================= */
 
   if (
     appMatch &&
     request.method === "DELETE"
   ) {
     const id =
-      Number(appMatch[1]);
+      Number(
+        appMatch[1]
+      );
 
     const existing =
       await env.DB.prepare(
@@ -965,11 +1368,6 @@ if (
     }
 
 
-    /*
-      Get uploaded documents before
-      deleting their database records.
-    */
-
     const { results: docs } =
       await env.DB.prepare(
         `
@@ -982,23 +1380,22 @@ if (
         .all();
 
 
-    /*
-      If R2/FILES is configured,
-      remove the uploaded objects too.
-
-      If FILES is not configured,
-      the application can still be
-      deleted from D1 safely.
-    */
-
     if (env.FILES) {
-      for (const doc of docs) {
-        if (!doc.object_key) continue;
+      for (
+        const doc
+        of docs
+      ) {
+        if (
+          !doc.object_key
+        ) {
+          continue;
+        }
 
         try {
           await env.FILES.delete(
             doc.object_key
           );
+
         } catch (err) {
           console.error(
             "Could not delete uploaded file:",
@@ -1010,10 +1407,6 @@ if (
     }
 
 
-    /*
-      Delete document database rows first.
-    */
-
     await env.DB.prepare(
       `
       DELETE FROM documents
@@ -1023,10 +1416,6 @@ if (
       .bind(id)
       .run();
 
-
-    /*
-      Then delete the application.
-    */
 
     await env.DB.prepare(
       `
@@ -1040,8 +1429,14 @@ if (
 
     return json({
       ok: true,
-      deleted: id,
+
+      deleted:
+        id,
+
       applicationNo:
+        existing.application_no,
+
+      application_no:
         existing.application_no
     });
   }
@@ -1056,6 +1451,7 @@ if (
       /^\/api\/admin\/documents\/(\d+)$/
     );
 
+
   if (
     docMatch &&
     request.method === "GET"
@@ -1069,16 +1465,23 @@ if (
         `
       )
         .bind(
-          Number(docMatch[1])
+          Number(
+            docMatch[1]
+          )
         )
         .first();
 
+
     if (!doc) {
       return json(
-        { error: "Not found" },
+        {
+          error:
+            "Document not found."
+        },
         404
       );
     }
+
 
     if (!env.FILES) {
       return json(
@@ -1090,30 +1493,44 @@ if (
       );
     }
 
+
     const obj =
       await env.FILES.get(
         doc.object_key
       );
 
+
     if (!obj) {
       return json(
-        { error: "File not found" },
+        {
+          error:
+            "File not found."
+        },
         404
       );
     }
 
+
     const headers =
       new Headers();
 
-    obj.writeHttpMetadata(
-      headers
-    );
+
+    if (
+      typeof obj.writeHttpMetadata ===
+      "function"
+    ) {
+      obj.writeHttpMetadata(
+        headers
+      );
+    }
+
 
     headers.set(
       "content-type",
       doc.mime ||
-        "application/octet-stream"
+      "application/octet-stream"
     );
+
 
     headers.set(
       "content-disposition",
@@ -1122,9 +1539,18 @@ if (
       )}"`
     );
 
+
+    headers.set(
+      "cache-control",
+      "private, no-store"
+    );
+
+
     return new Response(
       obj.body,
-      { headers }
+      {
+        headers
+      }
     );
   }
 
@@ -1142,56 +1568,107 @@ if (
         `
         SELECT
           application_no,
+          membership_no,
           created_at,
           status,
           full_name,
+          gender,
+          age_group,
+          id_number,
+          address,
+          mailing_address,
           phone,
           email,
+          registered_business,
           business_name,
           business_type,
+          business_type_other,
           business_description,
+          business_description_other,
+          categories,
           primary_group,
           products,
-          years_business
+          years_business,
+          credentials,
+          credential_other,
+          production_capacity,
+          target_production_capacity,
+          current_markets,
+          target_markets,
+          business_targets,
+          support_needs,
+          expectations,
+          signature_name,
+          internal_notes
         FROM applications
         ORDER BY id
         `
       ).all();
 
+
     const cols = [
       "application_no",
+      "membership_no",
       "created_at",
       "status",
       "full_name",
+      "gender",
+      "age_group",
+      "id_number",
+      "address",
+      "mailing_address",
       "phone",
       "email",
+      "registered_business",
       "business_name",
       "business_type",
+      "business_type_other",
       "business_description",
+      "business_description_other",
+      "categories",
       "primary_group",
       "products",
-      "years_business"
+      "years_business",
+      "credentials",
+      "credential_other",
+      "production_capacity",
+      "target_production_capacity",
+      "current_markets",
+      "target_markets",
+      "business_targets",
+      "support_needs",
+      "expectations",
+      "signature_name",
+      "internal_notes"
     ];
 
-    const esc = value =>
-      `"${String(
-        value ?? ""
-      ).replaceAll(
-        '"',
-        '""'
-      )}"`;
+
+    const csvEscape =
+      (value) =>
+        `"${String(
+          value ?? ""
+        ).replaceAll(
+          '"',
+          '""'
+        )}"`;
+
 
     const csv = [
       cols.join(","),
 
-      ...rows.map(row =>
-        cols
-          .map(column =>
-            esc(row[column])
-          )
-          .join(",")
+      ...rows.map(
+        (row) =>
+          cols
+            .map(
+              (column) =>
+                csvEscape(
+                  row[column]
+                )
+            )
+            .join(",")
       )
     ].join("\n");
+
 
     return new Response(
       csv,
@@ -1201,7 +1678,10 @@ if (
             "text/csv;charset=utf-8",
 
           "content-disposition":
-            'attachment; filename="TAPA_members.csv"'
+            'attachment; filename="TAPA_members.csv"',
+
+          "cache-control":
+            "no-store"
         }
       }
     );
@@ -1219,13 +1699,19 @@ if (
     const { results } =
       await env.DB.prepare(
         `
-        SELECT *
+        SELECT
+          id,
+          name,
+          active
         FROM categories
         ORDER BY name
         `
       ).all();
 
-    return json(results);
+
+    return json(
+      results
+    );
   }
 
 
@@ -1240,33 +1726,53 @@ if (
     const body =
       await request.json();
 
+
     const name =
-      String(body.name || "")
-        .trim();
+      String(
+        body.name ||
+        ""
+      ).trim();
+
 
     if (!name) {
       return json(
-        { error: "Name required" },
+        {
+          error:
+            "Processor group name is required."
+        },
         400
       );
     }
 
+
     try {
-      await env.DB.prepare(
-        `
-        INSERT INTO categories(
-          name,
-          active
+      const result =
+        await env.DB.prepare(
+          `
+          INSERT INTO categories(
+            name,
+            active
+          )
+          VALUES (?,1)
+          `
         )
-        VALUES (?,1)
-        `
-      )
-        .bind(name)
-        .run();
+          .bind(name)
+          .run();
+
 
       return json({
-        ok: true
+        ok: true,
+
+        id:
+          result.meta
+            ?.last_row_id ??
+          null,
+
+        name,
+
+        active: 1
       });
+
 
     } catch (err) {
       console.error(
@@ -1274,10 +1780,11 @@ if (
         err
       );
 
+
       return json(
         {
           error:
-            "Category already exists."
+            "Processor group already exists or could not be added."
         },
         400
       );
@@ -1294,12 +1801,54 @@ if (
       /^\/api\/admin\/categories\/(\d+)$/
     );
 
+
   if (
     catMatch &&
     request.method === "PATCH"
   ) {
     const body =
       await request.json();
+
+
+    const active =
+      body.active ??
+      body.enabled;
+
+
+    const activeValue =
+      active
+        ? 1
+        : 0;
+
+
+    const id =
+      Number(
+        catMatch[1]
+      );
+
+
+    const existing =
+      await env.DB.prepare(
+        `
+        SELECT id
+        FROM categories
+        WHERE id = ?
+        `
+      )
+        .bind(id)
+        .first();
+
+
+    if (!existing) {
+      return json(
+        {
+          error:
+            "Processor group not found."
+        },
+        404
+      );
+    }
+
 
     await env.DB.prepare(
       `
@@ -1309,13 +1858,17 @@ if (
       `
     )
       .bind(
-        body.active ? 1 : 0,
-        Number(catMatch[1])
+        activeValue,
+        id
       )
       .run();
 
+
     return json({
-      ok: true
+      ok: true,
+      id,
+      active:
+        activeValue
     });
   }
 
@@ -1325,7 +1878,10 @@ if (
 ========================================================= */
 
   return json(
-    { error: "Not found" },
+    {
+      error:
+        "Not found"
+    },
     404
   );
 }
@@ -1342,11 +1898,13 @@ async function createApplication(
   const form =
     await request.formData();
 
+
   const fullName =
     text(
       form,
       "fullName"
     );
+
 
   const address =
     text(
@@ -1354,17 +1912,21 @@ async function createApplication(
       "address"
     );
 
+
   const phone =
     text(
       form,
       "phone"
     );
 
+
   const email =
     text(
       form,
       "email"
-    ).toLowerCase();
+    )
+      .toLowerCase();
+
 
   const primaryGroup =
     text(
@@ -1372,11 +1934,13 @@ async function createApplication(
       "primaryGroup"
     );
 
+
   const declaration =
     text(
       form,
       "declaration"
     );
+
 
   if (
     !fullName ||
@@ -1398,25 +1962,152 @@ async function createApplication(
 
   const categories =
     form
-      .getAll("categories")
-      .map(String);
+      .getAll(
+        "categories"
+      )
+      .map(String)
+      .map(
+        value =>
+          value.trim()
+      )
+      .filter(Boolean);
+
 
   const credentials =
     form
-      .getAll("credentials")
-      .map(String);
+      .getAll(
+        "credentials"
+      )
+      .map(String)
+      .map(
+        value =>
+          value.trim()
+      )
+      .filter(Boolean);
+
 
   const supportNeeds =
     form
-      .getAll("supportNeeds")
-      .map(String);
+      .getAll(
+        "supportNeeds"
+      )
+      .map(String)
+      .map(
+        value =>
+          value.trim()
+      )
+      .filter(Boolean);
+
+
+  const currentMarkets =
+    form
+      .getAll(
+        "currentMarkets"
+      )
+      .map(String)
+      .map(
+        value =>
+          value.trim()
+      )
+      .filter(Boolean);
+
+
+  const targetMarkets =
+    form
+      .getAll(
+        "targetMarkets"
+      )
+      .map(String)
+      .map(
+        value =>
+          value.trim()
+      )
+      .filter(Boolean);
+
+
+  const businessType =
+    text(
+      form,
+      "businessType"
+    );
+
+
+  const businessTypeOther =
+    text(
+      form,
+      "businessTypeOther"
+    );
+
+
+  const businessDescription =
+    text(
+      form,
+      "businessDescription"
+    );
+
+
+  const businessDescriptionOther =
+    text(
+      form,
+      "businessDescriptionOther"
+    );
+
+
+  const credentialOther =
+    text(
+      form,
+      "credentialOther"
+    );
+
+
+  if (
+    businessType === "Other" &&
+    !businessTypeOther
+  ) {
+    return json(
+      {
+        error:
+          "Please specify the other business type."
+      },
+      400
+    );
+  }
+
+
+  if (
+    businessDescription ===
+      "Other" &&
+    !businessDescriptionOther
+  ) {
+    return json(
+      {
+        error:
+          "Please specify the other business description."
+      },
+      400
+    );
+  }
+
+
+  if (
+    credentials.includes(
+      "Other"
+    ) &&
+    !credentialOther
+  ) {
+    return json(
+      {
+        error:
+          "Please specify the other credential or certification."
+      },
+      400
+    );
+  }
+
 
   const createdAt =
     new Date()
-      .toISOString();
-
-
-  const info =
+      .toISOString();  const info =
     await env.DB.prepare(
       `
       INSERT INTO applications(
@@ -1433,12 +2124,20 @@ async function createApplication(
         registered_business,
         business_name,
         business_type,
+        business_type_other,
         business_description,
+        business_description_other,
         categories,
         primary_group,
         products,
         years_business,
         credentials,
+        credential_other,
+        production_capacity,
+        target_production_capacity,
+        current_markets,
+        target_markets,
+        business_targets,
         support_needs,
         expectations,
         declaration,
@@ -1446,8 +2145,10 @@ async function createApplication(
         internal_notes
       )
       VALUES (
-        ?,?,?,?,?,?,?,?,?,?,?,?,
-        ?,?,?,?,?,?,?,?,?,?,?,?
+        ?,?,?,?,?,?,?,?,
+        ?,?,?,?,?,?,?,?,
+        ?,?,?,?,?,?,?,?,
+        ?,?,?,?,?,?,?,?
       )
       `
     )
@@ -1455,59 +2156,109 @@ async function createApplication(
         createdAt,
         "Pending",
         fullName,
-        text(form, "gender"),
-        text(form, "ageGroup"),
-        text(form, "idNumber"),
+
+        text(
+          form,
+          "gender"
+        ),
+
+        text(
+          form,
+          "ageGroup"
+        ),
+
+        text(
+          form,
+          "idNumber"
+        ),
+
         address,
+
         text(
           form,
           "mailingAddress"
         ),
+
         phone,
         email,
+
         text(
           form,
           "registeredBusiness"
         ),
+
         text(
           form,
           "businessName"
         ),
-        text(
-          form,
-          "businessType"
-        ),
-        text(
-          form,
-          "businessDescription"
-        ),
+
+        businessType,
+        businessTypeOther,
+
+        businessDescription,
+        businessDescriptionOther,
+
         JSON.stringify(
           categories
         ),
+
         primaryGroup,
+
         text(
           form,
           "products"
         ),
+
         text(
           form,
           "yearsBusiness"
         ),
+
         JSON.stringify(
           credentials
         ),
+
+        credentialOther,
+
+        text(
+          form,
+          "productionCapacity"
+        ),
+
+        text(
+          form,
+          "targetProductionCapacity"
+        ),
+
+        JSON.stringify(
+          currentMarkets
+        ),
+
+        JSON.stringify(
+          targetMarkets
+        ),
+
+        text(
+          form,
+          "businessTargets"
+        ),
+
         JSON.stringify(
           supportNeeds
         ),
+
         text(
           form,
           "expectations"
         ),
+
         1,
+
         text(
           form,
           "signatureName"
         ) || fullName,
+
         ""
       )
       .run();
@@ -1521,7 +2272,12 @@ async function createApplication(
 
   const applicationNo =
     `TAPA-${new Date().getFullYear()}-` +
-    `${String(id).padStart(5,"0")}`;
+    `${String(
+      id
+    ).padStart(
+      5,
+      "0"
+    )}`;
 
 
   await env.DB.prepare(
@@ -1544,20 +2300,19 @@ async function createApplication(
 
   const files =
     form
-      .getAll("documents")
+      .getAll(
+        "documents"
+      )
       .filter(
         file =>
           file &&
-          typeof file === "object" &&
-          "arrayBuffer" in file &&
+          typeof file ===
+            "object" &&
+          "arrayBuffer" in
+            file &&
           file.size > 0
       );
 
-
-  /*
-    Only attempt uploads when
-    a FILES/R2 binding exists.
-  */
 
   if (
     files.length &&
@@ -1565,14 +2320,18 @@ async function createApplication(
   ) {
     for (
       const file
-      of files.slice(0, 6)
+      of files.slice(
+        0,
+        6
+      )
     ) {
       if (
         file.size >
-          MAX_FILE_SIZE
+        MAX_FILE_SIZE
       ) {
         continue;
       }
+
 
       if (
         !ALLOWED_TYPES.has(
@@ -1582,15 +2341,20 @@ async function createApplication(
         continue;
       }
 
+
       const key =
         `applications/${id}/` +
         `${crypto.randomUUID()}-` +
-        `${safeName(file.name)}`;
+        `${safeName(
+          file.name
+        )}`;
 
 
       await env.FILES.put(
         key,
+
         await file.arrayBuffer(),
+
         {
           httpMetadata: {
             contentType:
@@ -1626,8 +2390,14 @@ async function createApplication(
 
   return json({
     ok: true,
+
     applicationNo,
-    status: "Pending"
+
+    application_no:
+      applicationNo,
+
+    status:
+      "Pending"
   });
 }
 
@@ -1646,17 +2416,40 @@ async function scalar(
     ).first();
 
   return Number(
-    result?.c || 0
+    result?.c ||
+    0
   );
 }
-function escapeHtml(value = "") {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+
+
+function escapeHtml(
+  value = ""
+) {
+  return String(
+    value
+  )
+    .replaceAll(
+      "&",
+      "&amp;"
+    )
+    .replaceAll(
+      "<",
+      "&lt;"
+    )
+    .replaceAll(
+      ">",
+      "&gt;"
+    )
+    .replaceAll(
+      '"',
+      "&quot;"
+    )
+    .replaceAll(
+      "'",
+      "&#039;"
+    );
 }
+
 
 /* =========================================================
    GENERAL HELPERS
@@ -1667,7 +2460,9 @@ function text(
   key
 ) {
   return String(
-    form.get(key) || ""
+    form.get(
+      key
+    ) || ""
   ).trim();
 }
 
@@ -1680,6 +2475,7 @@ function parseJSON(
     return JSON.parse(
       value || ""
     );
+
   } catch {
     return fallback;
   }
@@ -1691,7 +2487,9 @@ function json(
   status = 200
 ) {
   return new Response(
-    JSON.stringify(data),
+    JSON.stringify(
+      data
+    ),
     {
       status,
 
@@ -1707,9 +2505,12 @@ function json(
 }
 
 
-function safeName(value) {
+function safeName(
+  value
+) {
   return String(
-    value || "file"
+    value ||
+    "file"
   )
     .replace(
       /[^a-zA-Z0-9._-]/g,
@@ -1726,7 +2527,8 @@ function sanitizeHeader(
   value
 ) {
   return String(
-    value || "file"
+    value ||
+    "file"
   )
     .replace(
       /[\r\n"]/g,
@@ -1743,17 +2545,32 @@ function sanitizeHeader(
    CONSTANT-TIME STRING COMPARISON
 ========================================================= */
 
-function safeEqual(a, b) {
-  a = String(a ?? "");
-  b = String(b ?? "");
+function safeEqual(
+  a,
+  b
+) {
+  a =
+    String(
+      a ?? ""
+    );
+
+  b =
+    String(
+      b ?? ""
+    );
+
 
   if (
-    a.length !== b.length
+    a.length !==
+    b.length
   ) {
     return false;
   }
 
-  let value = 0;
+
+  let value =
+    0;
+
 
   for (
     let i = 0;
@@ -1761,9 +2578,14 @@ function safeEqual(a, b) {
     i++
   ) {
     value |=
-      a.charCodeAt(i) ^
-      b.charCodeAt(i);
+      a.charCodeAt(
+        i
+      ) ^
+      b.charCodeAt(
+        i
+      );
   }
+
 
   return value === 0;
 }
@@ -1773,7 +2595,9 @@ function safeEqual(a, b) {
    BASE64 URL
 ========================================================= */
 
-function b64url(value) {
+function b64url(
+  value
+) {
   return btoa(
     unescape(
       encodeURIComponent(
@@ -1810,31 +2634,42 @@ async function sign(
     );
   }
 
+
   const key =
     await crypto.subtle.importKey(
       "raw",
 
       new TextEncoder()
-        .encode(secret),
+        .encode(
+          secret
+        ),
 
       {
-        name: "HMAC",
-        hash: "SHA-256"
+        name:
+          "HMAC",
+
+        hash:
+          "SHA-256"
       },
 
       false,
 
-      ["sign"]
+      [
+        "sign"
+      ]
     );
 
 
   const signature =
     await crypto.subtle.sign(
       "HMAC",
+
       key,
 
       new TextEncoder()
-        .encode(payload)
+        .encode(
+          payload
+        )
     );
 
 
@@ -1846,8 +2681,13 @@ async function sign(
     .map(
       byte =>
         byte
-          .toString(16)
-          .padStart(2, "0")
+          .toString(
+            16
+          )
+          .padStart(
+            2,
+            "0"
+          )
     )
     .join("");
 }
@@ -1869,7 +2709,9 @@ async function getSession(
 
   const raw =
     cookie
-      .split(";")
+      .split(
+        ";"
+      )
       .map(
         item =>
           item.trim()
@@ -1896,7 +2738,9 @@ async function getSession(
     payload,
     signature
   ] =
-    raw.split(".");
+    raw.split(
+      "."
+    );
 
 
   if (
@@ -1962,7 +2806,9 @@ async function getSession(
       JSON.parse(
         decodeURIComponent(
           escape(
-            atob(padded)
+            atob(
+              padded
+            )
           )
         )
       );
