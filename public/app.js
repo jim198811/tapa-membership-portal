@@ -1,6 +1,5 @@
 // ============================================================
 // TAPA MEMBERSHIP PORTAL - FRONT END
-// Matches current Cloudflare worker.js
 // ============================================================
 
 const $ = (id) => document.getElementById(id);
@@ -128,6 +127,7 @@ async function loadCategories() {
     if (primaryGroup) {
       primaryGroup.innerHTML = `
         <option value="">Select Primary Processor Group</option>
+
         ${groups.map(name => `
           <option value="${esc(name)}">
             ${esc(name)}
@@ -145,6 +145,7 @@ async function loadCategories() {
     }
   }
 }
+
 
 // ============================================================
 // CREDENTIAL / CERTIFICATE OPTIONS
@@ -184,25 +185,195 @@ if (credentialList) {
 
 
 // ============================================================
-// MEMBERSHIP APPLICATION
+// SUPPORT REQUIRED OPTIONS
+// ============================================================
+
+const supportOptions = [
+  "Training & Capacity Building",
+  "Food Safety & Certification",
+  "Product Development",
+  "Packaging & Labelling",
+  "Marketing & Branding",
+  "Digital Marketing",
+  "Access to Finance",
+  "Equipment & Technology",
+  "Market Access",
+  "Export Development",
+  "Business Development",
+  "Networking & Distribution"
+];
+
+const supportList =
+  $("supportList");
+
+if (supportList) {
+  supportList.innerHTML =
+    supportOptions
+      .map(
+        (item) => `
+          <label class="check">
+            <input
+              type="checkbox"
+              name="supportNeeds"
+              value="${esc(item)}"
+            >
+            ${esc(item)}
+          </label>
+        `
+      )
+      .join("");
+}
+
+
+// ============================================================
+// CONDITIONAL OTHER FIELDS
+// ============================================================
+
+function toggleOtherField(
+  selectId,
+  wrapId,
+  inputId
+) {
+  const select = $(selectId);
+  const wrap = $(wrapId);
+  const input = $(inputId);
+
+  if (!select || !wrap) return;
+
+  const show =
+    select.value === "Other";
+
+  wrap.classList.toggle(
+    "hidden",
+    !show
+  );
+
+  if (input) {
+    input.disabled = !show;
+
+    if (!show) {
+      input.value = "";
+    }
+  }
+}
+
+
+function updateBusinessTypeOther() {
+  toggleOtherField(
+    "businessType",
+    "businessTypeOtherWrap",
+    "businessTypeOther"
+  );
+}
+
+
+function updateBusinessDescriptionOther() {
+  toggleOtherField(
+    "businessDescription",
+    "businessDescriptionOtherWrap",
+    "businessDescriptionOther"
+  );
+}
+
+
+function updateCredentialOther() {
+  const otherSelected =
+    Array.from(
+      document.querySelectorAll(
+        'input[name="credentials"]:checked'
+      )
+    ).some(
+      (checkbox) =>
+        checkbox.value === "Other"
+    );
+
+  const wrap =
+    $("credentialOtherWrap");
+
+  const input =
+    $("credentialOther");
+
+  if (!wrap) return;
+
+  wrap.classList.toggle(
+    "hidden",
+    !otherSelected
+  );
+
+  if (input) {
+    input.disabled =
+      !otherSelected;
+
+    if (!otherSelected) {
+      input.value = "";
+    }
+  }
+}
+
+
+$("businessType")?.addEventListener(
+  "change",
+  updateBusinessTypeOther
+);
+
+$("businessDescription")?.addEventListener(
+  "change",
+  updateBusinessDescriptionOther
+);
+
+document
+  .querySelectorAll(
+    'input[name="credentials"]'
+  )
+  .forEach((checkbox) => {
+    checkbox.addEventListener(
+      "change",
+      updateCredentialOther
+    );
+  });
+
+
+// ============================================================
+// APPLICATION FORM SUBMISSION
 // ============================================================
 
 const applicationForm =
   $("applicationForm");
 
 if (applicationForm) {
-  applicationForm.onsubmit =
+  applicationForm.addEventListener(
+    "submit",
     async (event) => {
       event.preventDefault();
 
       const formMsg =
         $("formMsg");
 
+      const submitButton =
+        applicationForm.querySelector(
+          'button[type="submit"]'
+        );
+
+      if (
+        !applicationForm.reportValidity()
+      ) {
+        return;
+      }
+
+      if (submitButton) {
+        submitButton.disabled =
+          true;
+
+        submitButton.textContent =
+          "Submitting...";
+      }
+
       if (formMsg) {
-        formMsg.innerHTML =
-          `<div class="message">
+        formMsg.innerHTML = `
+          <div class="message">
             Submitting registration...
-          </div>`;
+          </div>
+        `;
       }
 
       try {
@@ -230,28 +401,43 @@ if (applicationForm) {
           );
         }
 
+        const applicationNo =
+          result.applicationNo ||
+          result.application_no ||
+          "";
+
         if (formMsg) {
           formMsg.innerHTML = `
             <div class="message success">
+
               <strong>
-                Registration submitted.
+                Registration submitted successfully.
               </strong>
-              <br>
+
+              <br><br>
+
               Your application number is
+
               <strong>
-                ${esc(
-                  result.application_no ||
-                  result.applicationNo
-                )}
+                ${esc(applicationNo)}
               </strong>.
-              Save it to check your status.
+
+              <br>
+
+              Please save this number.
+              You will need it together
+              with your email address
+              to check your application status.
+
             </div>
           `;
         }
 
         applicationForm.reset();
 
-        await loadCategories();
+        updateBusinessTypeOther();
+        updateBusinessDescriptionOther();
+        updateCredentialOther();
 
       } catch (err) {
         console.error(
@@ -266,8 +452,18 @@ if (applicationForm) {
             </div>
           `;
         }
+
+      } finally {
+        if (submitButton) {
+          submitButton.disabled =
+            false;
+
+          submitButton.textContent =
+            "Submit Registration";
+        }
       }
-    };
+    }
+  );
 }
 
 
@@ -280,119 +476,130 @@ const checkStatusBtn =
 
 if (checkStatusBtn) {
   checkStatusBtn.onclick =
-    async () => {
-
-      const applicationNo =
-        $("applicationNo")?.value?.trim() ||
-        $("statusApplicationNo")
-          ?.value?.trim() ||
-        "";
-
-      const email =
-        $("statusEmail")
-          ?.value?.trim() ||
-        $("checkEmail")
-          ?.value?.trim() ||
-        "";
-
-      const statusMsg =
-        $("statusMsg") ||
-        $("statusResult");
-
-      if (
-        !applicationNo ||
-        !email
-      ) {
-        if (statusMsg) {
-          statusMsg.innerHTML =
-            `<div class="message error">
-              Enter your application number and email.
-            </div>`;
-        }
-
-        return;
-      }
-
-      try {
-        const response =
-          await fetch(
-            "/api/status",
-            {
-              method: "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json"
-              },
-
-              body:
-                JSON.stringify({
-                  applicationNo,
-                  email
-                })
-            }
-          );
-
-        const result =
-          await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            result.error ||
-            "Application not found."
-          );
-        }
-
-        if (statusMsg) {
-          statusMsg.innerHTML = `
-            <div class="message">
-              <strong>
-                ${esc(
-                  result.business_name ||
-                  result.full_name ||
-                  "Application"
-                )}
-              </strong>
-              <br>
-
-              ${esc(
-                result.application_no
-              )}
-
-              <br>
-
-              Status:
-              <strong>
-                ${esc(result.status)}
-              </strong>
-
-              ${
-                result.primary_group
-                  ? `<br>
-                     Primary Group:
-                     ${esc(
-                       result.primary_group
-                     )}`
-                  : ""
-              }
-            </div>
-          `;
-        }
-
-      } catch (err) {
-        if (statusMsg) {
-          statusMsg.innerHTML = `
-            <div class="message error">
-              ${esc(err.message)}
-            </div>
-          `;
-        }
-      }
-    };
+    checkApplicationStatus;
 }
 
 
-// ============================================================
+async function checkApplicationStatus() {
+  const applicationNo =
+    $("statusNo")
+      ?.value
+      ?.trim() || "";
+
+  const email =
+    $("statusEmail")
+      ?.value
+      ?.trim() || "";
+
+  const target =
+    $("statusResult");
+
+  if (!applicationNo || !email) {
+    if (target) {
+      target.innerHTML = `
+        <div class="message error">
+          Enter your application number
+          and email address.
+        </div>
+      `;
+    }
+
+    return;
+  }
+
+  if (target) {
+    target.innerHTML = `
+      <div class="message">
+        Checking application...
+      </div>
+    `;
+  }
+
+  try {
+    const response =
+      await fetch(
+        "/api/status",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body:
+            JSON.stringify({
+              applicationNo,
+              email
+            })
+        }
+      );
+
+    const result =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        result.error ||
+        "Application not found."
+      );
+    }
+
+    if (target) {
+      target.innerHTML = `
+        <div class="message success">
+
+          <strong>
+            ${esc(
+              result.business_name ||
+              result.full_name ||
+              "Application"
+            )}
+          </strong>
+
+          <br><br>
+
+          Application:
+          <strong>
+            ${esc(result.application_no)}
+          </strong>
+
+          <br>
+
+          Status:
+          <strong>
+            ${esc(result.status)}
+          </strong>
+
+          ${
+            result.primary_group
+              ? `
+                <br>
+
+                Primary Processor Group:
+                <strong>
+                  ${esc(
+                    result.primary_group
+                  )}
+                </strong>
+              `
+              : ""
+          }
+
+        </div>
+      `;
+    }
+
+  } catch (err) {
+    if (target) {
+      target.innerHTML = `
+        <div class="message error">
+          ${esc(err.message)}
+        </div>
+      `;
+    }
+  }
+}// ============================================================
 // ADMIN AUTHENTICATION
 // ============================================================
 
@@ -414,17 +621,23 @@ async function checkAdmin() {
       response.ok &&
       result.authenticated === true;
 
-    $("adminLogin")
-      ?.classList.toggle(
-        "hidden",
-        loggedIn
-      );
+    if ($("adminLogin")) {
+      $("adminLogin")
+        .classList
+        .toggle(
+          "hidden",
+          loggedIn
+        );
+    }
 
-    $("adminPanel")
-      ?.classList.toggle(
-        "hidden",
-        !loggedIn
-      );
+    if ($("adminPanel")) {
+      $("adminPanel")
+        .classList
+        .toggle(
+          "hidden",
+          !loggedIn
+        );
+    }
 
     if (loggedIn) {
       await Promise.all([
@@ -436,19 +649,21 @@ async function checkAdmin() {
 
   } catch (err) {
     console.error(
-      "Admin check:",
+      "Admin session check failed:",
       err
     );
 
-    $("adminLogin")
-      ?.classList.remove(
-        "hidden"
-      );
+    if ($("adminLogin")) {
+      $("adminLogin")
+        .classList
+        .remove("hidden");
+    }
 
-    $("adminPanel")
-      ?.classList.add(
-        "hidden"
-      );
+    if ($("adminPanel")) {
+      $("adminPanel")
+        .classList
+        .add("hidden");
+    }
   }
 }
 
@@ -463,24 +678,25 @@ const loginBtn =
 if (loginBtn) {
   loginBtn.onclick =
     async () => {
-
       const email =
         $("adminEmail")
-          ?.value?.trim() ||
-        $("loginEmail")
-          ?.value?.trim() ||
-        "";
+          ?.value
+          ?.trim() || "";
 
       const password =
         $("adminPassword")
-          ?.value ||
-        $("loginPassword")
-          ?.value ||
-        "";
+          ?.value || "";
 
-      const loginMsg =
-        $("loginMsg") ||
-        $("adminLoginMsg");
+      const target =
+        $("loginMsg");
+
+      if (target) {
+        target.innerHTML = `
+          <div class="message">
+            Signing in...
+          </div>
+        `;
+      }
 
       try {
         const response =
@@ -515,9 +731,8 @@ if (loginBtn) {
           );
         }
 
-        if (loginMsg) {
-          loginMsg.textContent =
-            "";
+        if (target) {
+          target.innerHTML = "";
         }
 
         if ($("adminPassword")) {
@@ -525,17 +740,20 @@ if (loginBtn) {
             "";
         }
 
-        if ($("loginPassword")) {
-          $("loginPassword").value =
-            "";
-        }
-
         await checkAdmin();
 
       } catch (err) {
-        if (loginMsg) {
-          loginMsg.textContent =
-            err.message;
+        console.error(
+          "Admin login error:",
+          err
+        );
+
+        if (target) {
+          target.innerHTML = `
+            <div class="message error">
+              ${esc(err.message)}
+            </div>
+          `;
         }
       }
     };
@@ -552,15 +770,22 @@ const logoutBtn =
 if (logoutBtn) {
   logoutBtn.onclick =
     async () => {
+      try {
+        await fetch(
+          "/api/admin/logout",
+          {
+            method: "POST",
+            credentials:
+              "same-origin"
+          }
+        );
 
-      await fetch(
-        "/api/admin/logout",
-        {
-          method: "POST",
-          credentials:
-            "same-origin"
-        }
-      );
+      } catch (err) {
+        console.error(
+          "Logout error:",
+          err
+        );
+      }
 
       await checkAdmin();
     };
@@ -568,14 +793,14 @@ if (logoutBtn) {
 
 
 // ============================================================
-// ADMIN DASHBOARD COUNTS
+// DASHBOARD
 // ============================================================
 
 async function loadDashboard() {
   try {
     const response =
       await fetch(
-        "/api/admin/summary",
+        "/api/admin/dashboard",
         {
           credentials:
             "same-origin"
@@ -604,12 +829,9 @@ async function loadDashboard() {
 
     setText(
       "stReview",
-      result.underReview
-    );
-
-    setText(
-      "stUnderReview",
-      result.underReview
+      result.review ??
+      result.underReview ??
+      0
     );
 
     setText(
@@ -617,14 +839,9 @@ async function loadDashboard() {
       result.approved
     );
 
-    setText(
-      "stRejected",
-      result.rejected
-    );
-
   } catch (err) {
     console.error(
-      "Dashboard error:",
+      "Dashboard load error:",
       err
     );
   }
@@ -638,36 +855,48 @@ async function loadDashboard() {
 async function loadApplications() {
   const search =
     $("searchApps")
-      ?.value?.trim() || "";
+      ?.value
+      ?.trim() || "";
 
   const status =
     $("filterStatus")
-      ?.value?.trim() || "";
+      ?.value
+      ?.trim() || "";
 
-  const query =
+  const params =
     new URLSearchParams();
 
   if (search) {
-    query.set(
-      "search",
+    params.set(
+      "q",
       search
     );
   }
 
-  if (
-    status &&
-    status !== "All statuses"
-  ) {
-    query.set(
+  if (status) {
+    params.set(
       "status",
       status
     );
   }
 
+  const target =
+    $("appRows");
+
+  if (target) {
+    target.innerHTML = `
+      <tr>
+        <td colspan="6">
+          Loading applications...
+        </td>
+      </tr>
+    `;
+  }
+
   try {
     const response =
       await fetch(
-        `/api/admin/applications?${query.toString()}`,
+        `/api/admin/applications?${params.toString()}`,
         {
           credentials:
             "same-origin"
@@ -693,31 +922,34 @@ async function loadApplications() {
       "Application list error:",
       err
     );
+
+    if (target) {
+      target.innerHTML = `
+        <tr>
+          <td colspan="6">
+            ${esc(err.message)}
+          </td>
+        </tr>
+      `;
+    }
   }
 }
 
+
+// ============================================================
+// RENDER ADMIN APPLICATION TABLE
+// ============================================================
 
 function renderApplications(
   applications
 ) {
   const tbody =
-    $("applicationRows") ||
-    $("applicationsRows") ||
-    $("applicationList") ||
-    document.querySelector(
-      "#adminPanel tbody"
-    );
+    $("appRows");
 
-  if (!tbody) {
-    console.warn(
-      "Application table body not found."
-    );
-
-    return;
-  }
+  if (!tbody) return;
 
   if (
-    !applications ||
+    !Array.isArray(applications) ||
     applications.length === 0
   ) {
     tbody.innerHTML = `
@@ -736,15 +968,18 @@ function renderApplications(
       .map(
         (app) => `
           <tr>
+
             <td>
               ${esc(
-                app.application_no
+                app.application_no ||
+                ""
               )}
             </td>
 
             <td>
               ${esc(
-                app.full_name
+                app.full_name ||
+                ""
               )}
             </td>
 
@@ -765,7 +1000,8 @@ function renderApplications(
             <td>
               <strong>
                 ${esc(
-                  app.status
+                  app.status ||
+                  "Pending"
                 )}
               </strong>
             </td>
@@ -773,14 +1009,13 @@ function renderApplications(
             <td>
               <button
                 type="button"
-                class="btn review-btn"
-                data-id="${Number(
-                  app.id
-                )}"
+                class="secondary review-app-btn"
+                data-id="${Number(app.id)}"
               >
                 Review
               </button>
             </td>
+
           </tr>
         `
       )
@@ -788,25 +1023,23 @@ function renderApplications(
 
   tbody
     .querySelectorAll(
-      ".review-btn"
+      ".review-app-btn"
     )
     .forEach((button) => {
-      button.addEventListener(
-        "click",
+      button.onclick =
         () => {
-          window.viewApp(
+          viewApp(
             Number(
               button.dataset.id
             )
           );
-        }
-      );
+        };
     });
 }
 
 
 // ============================================================
-// SEARCH APPLICATIONS
+// APPLICATION SEARCH / FILTERS
 // ============================================================
 
 const searchBtn =
@@ -818,29 +1051,31 @@ if (searchBtn) {
 }
 
 
-if ($("searchApps")) {
-  $("searchApps")
-    .addEventListener(
-      "keydown",
-      (event) => {
-        if (
-          event.key === "Enter"
-        ) {
-          event.preventDefault();
+const searchApps =
+  $("searchApps");
 
-          loadApplications();
-        }
+if (searchApps) {
+  searchApps.addEventListener(
+    "keydown",
+    (event) => {
+      if (
+        event.key === "Enter"
+      ) {
+        event.preventDefault();
+
+        loadApplications();
       }
-    );
+    }
+  );
 }
 
 
-if ($("filterStatus")) {
-  $("filterStatus")
-    .addEventListener(
-      "change",
-      loadApplications
-    );
+const filterStatus =
+  $("filterStatus");
+
+if (filterStatus) {
+  filterStatus.onchange =
+    loadApplications;
 }
 
 
@@ -850,7 +1085,6 @@ if ($("filterStatus")) {
 
 window.viewApp =
   async function (id) {
-
     currentApplicationId =
       Number(id);
 
@@ -874,7 +1108,9 @@ window.viewApp =
         );
       }
 
-      openApplicationModal(app);
+      openApplicationModal(
+        app
+      );
 
     } catch (err) {
       console.error(
@@ -882,148 +1118,412 @@ window.viewApp =
         err
       );
 
-      alert(err.message);
+      alert(
+        err.message ||
+        "Could not open application."
+      );
     }
   };
 
 
 // ============================================================
-// APPLICATION REVIEW MODAL
+// FORMAT VALUES FOR ADMIN REVIEW
 // ============================================================
 
-function openApplicationModal(app) {
-  let modal =
-    $("modal");
-
-  if (!modal) {
-    modal =
-      document.createElement(
-        "div"
-      );
-
-    modal.id = "modal";
-    modal.className = "modal";
-
-    modal.innerHTML = `
-      <div class="modal-card">
-        <button
-          type="button"
-          id="dynamicCloseModal"
-          style="
-            float:right;
-            cursor:pointer;
-          "
-        >
-          ×
-        </button>
-
-        <div id="modalBody"></div>
-      </div>
-    `;
-
-    document.body.appendChild(
-      modal
-    );
+function formatListValue(
+  value
+) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return "-";
   }
+
+  if (
+    Array.isArray(value)
+  ) {
+    return value.length
+      ? value.join(", ")
+      : "-";
+  }
+
+  if (
+    typeof value === "string"
+  ) {
+    const trimmed =
+      value.trim();
+
+    if (!trimmed) {
+      return "-";
+    }
+
+    try {
+      const parsed =
+        JSON.parse(trimmed);
+
+      if (
+        Array.isArray(parsed)
+      ) {
+        return parsed.length
+          ? parsed.join(", ")
+          : "-";
+      }
+
+    } catch (err) {
+      // Value is ordinary text.
+    }
+
+    return trimmed;
+  }
+
+  return String(value);
+}
+
+
+// ============================================================
+// DISPLAY "OTHER" VALUES CLEANLY
+// ============================================================
+
+function combineOtherValue(
+  mainValue,
+  otherValue
+) {
+  if (
+    mainValue === "Other" &&
+    otherValue
+  ) {
+    return `Other - ${otherValue}`;
+  }
+
+  return mainValue || "-";
+}
+
+
+// ============================================================
+// REVIEW DETAIL ITEM
+// ============================================================
+
+function reviewField(
+  label,
+  value
+) {
+  return `
+    <div
+      style="
+        padding:10px 0;
+        border-bottom:1px solid #e2e2e2;
+      "
+    >
+
+      <div
+        style="
+          font-size:12px;
+          font-weight:700;
+          color:#666;
+          margin-bottom:4px;
+        "
+      >
+        ${esc(label)}
+      </div>
+
+      <div>
+        ${esc(
+          formatListValue(
+            value
+          )
+        )}
+      </div>
+
+    </div>
+  `;
+}
+
+
+// ============================================================
+// OPEN REVIEW MODAL
+// ============================================================
+
+function openApplicationModal(
+  app
+) {
+  const modal =
+    $("modal");
 
   const modalBody =
     $("modalBody");
 
-  if (!modalBody) {
+  if (
+    !modal ||
+    !modalBody
+  ) {
     alert(
-      "Review window is missing from the page."
+      "The review window could not be found."
     );
 
     return;
   }
 
   const fields = [
-    ["Application", app.application_no],
-    ["Membership Number", app.membership_no],
-    ["Status", app.status],
-    ["Full Name", app.full_name],
-    ["Gender", app.gender],
-    ["Age Group", app.age_group],
-    ["ID Number", app.id_number],
-    ["Address", app.address],
-    ["Mailing Address", app.mailing_address],
-    ["Phone", app.phone],
-    ["Email", app.email],
-    ["Registered Business", app.registered_business],
-    ["Business Name", app.business_name],
-    ["Business Type", app.business_type],
-    ["Business Description", app.business_description],
-    ["Categories", app.categories],
-    ["Primary Group", app.primary_group],
-    ["Products", app.products],
-    ["Years in Business", app.years_business],
-    ["Credentials", app.credentials],
-    ["Support Needed", app.support_needed],
-    ["Expectations", app.expectations],
-    ["Signature", app.signature_name],
-    ["Submitted", app.created_at]
+
+    [
+      "Application Number",
+      app.application_no
+    ],
+
+    [
+      "Membership Number",
+      app.membership_no
+    ],
+
+    [
+      "Application Status",
+      app.status
+    ],
+
+    [
+      "Full Name",
+      app.full_name
+    ],
+
+    [
+      "Gender",
+      app.gender
+    ],
+
+    [
+      "Age Group",
+      app.age_group
+    ],
+
+    [
+      "ID Number",
+      app.id_number
+    ],
+
+    [
+      "Residential Address",
+      app.address
+    ],
+
+    [
+      "Production Address",
+      app.mailing_address
+    ],
+
+    [
+      "Phone",
+      app.phone
+    ],
+
+    [
+      "Email",
+      app.email
+    ],
+
+    [
+      "Registered Business",
+      app.registered_business
+    ],
+
+    [
+      "Business Name",
+      app.business_name
+    ],
+
+    [
+      "Business Type",
+      combineOtherValue(
+        app.business_type,
+        app.business_type_other
+      )
+    ],
+
+    [
+      "Business Description",
+      combineOtherValue(
+        app.business_description,
+        app.business_description_other
+      )
+    ],
+
+    [
+      "Processor Groups",
+      app.categories
+    ],
+
+    [
+      "Primary Processor Group",
+      app.primary_group
+    ],
+
+    [
+      "Products",
+      app.products
+    ],
+
+    [
+      "Years in Business",
+      app.years_business
+    ],
+
+    [
+      "Credentials / Certifications",
+      app.credentials
+    ],
+
+    [
+      "Other Credential",
+      app.credential_other
+    ],
+
+    [
+      "Current Production Capacity",
+      app.production_capacity
+    ],
+
+    [
+      "Target Production Capacity",
+      app.target_production_capacity
+    ],
+
+    [
+      "Current Markets",
+      app.current_markets
+    ],
+
+    [
+      "Target Markets",
+      app.target_markets
+    ],
+
+    [
+      "Business / Production Targets",
+      app.business_targets
+    ],
+
+    [
+      "Support Required",
+      app.support_needs
+    ],
+
+    [
+      "Expectations from TAPA",
+      app.expectations
+    ],
+
+    [
+      "Declaration",
+      app.declaration
+    ],
+
+    [
+      "Signature Name",
+      app.signature_name
+    ],
+
+    [
+      "Date Submitted",
+      app.created_at
+    ]
+
   ];
 
+
   modalBody.innerHTML = `
+
     <h2>
       Review Application
     </h2>
 
-    <div class="review-details">
+    <div
+      style="
+        margin-bottom:20px;
+      "
+    >
+
       ${fields
         .map(
-          ([label, value]) => `
-            <div
-              style="
-                margin-bottom:10px;
-                padding-bottom:8px;
-                border-bottom:1px solid #ddd;
-              "
-            >
-              <strong>
-                ${esc(label)}
-              </strong>
-              <br>
-              ${esc(
-                value ||
-                "-"
-              )}
-            </div>
-          `
+          ([label, value]) =>
+            reviewField(
+              label,
+              value
+            )
         )
         .join("")}
+
     </div>
 
+
     ${
-      app.documents &&
+      Array.isArray(app.documents) &&
       app.documents.length
         ? `
-          <h3>Documents</h3>
+
+          <h3>
+            Supporting Documents
+          </h3>
 
           <ul>
+
             ${app.documents
               .map(
                 (doc) => `
-                  <li>
-                    ${esc(
-                      doc.original_name
-                    )}
+
+                  <li
+                    style="
+                      margin-bottom:8px;
+                    "
+                  >
+
+                    <a
+                      href="/api/admin/documents/${Number(doc.id)}"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      ${esc(
+                        doc.original_name ||
+                        "Supporting Document"
+                      )}
+                    </a>
+
                   </li>
+
                 `
               )
               .join("")}
+
           </ul>
+
         `
-        : ""
+        : `
+
+          <p>
+            <em>
+              No supporting documents uploaded.
+            </em>
+          </p>
+
+        `
     }
 
-    <hr>
 
-    <label>
+    <hr
+      style="
+        margin:24px 0;
+      "
+    >
+
+
+    <label
+      for="reviewStatus"
+    >
       <strong>
         Application Status
       </strong>
     </label>
+
 
     <select
       id="reviewStatus"
@@ -1031,37 +1531,46 @@ function openApplicationModal(app) {
         width:100%;
         margin-top:6px;
         margin-bottom:15px;
+        padding:10px;
       "
     >
+
       ${[
         "Pending",
         "Under Review",
         "Approved",
-        "Rejected"
+        "Rejected",
+        "More Information Required"
       ]
         .map(
           (status) => `
+
             <option
-              value="${status}"
+              value="${esc(status)}"
               ${
-                app.status ===
-                status
+                app.status === status
                   ? "selected"
                   : ""
               }
             >
-              ${status}
+              ${esc(status)}
             </option>
+
           `
         )
         .join("")}
+
     </select>
 
-    <label>
+
+    <label
+      for="reviewNotes"
+    >
       <strong>
         Internal Notes
       </strong>
     </label>
+
 
     <textarea
       id="reviewNotes"
@@ -1070,56 +1579,74 @@ function openApplicationModal(app) {
         width:100%;
         margin-top:6px;
         margin-bottom:15px;
+        padding:10px;
       "
     >${esc(
       app.internal_notes ||
       ""
     )}</textarea>
 
+
     <div
       style="
         display:flex;
         gap:10px;
         flex-wrap:wrap;
+        margin-top:10px;
       "
     >
+
       <button
         type="button"
-        id="dynamicSaveReview"
-        class="btn"
+        id="saveReviewBtn"
+        class="primary"
       >
         Save Review
       </button>
-      <button
-  type="button"
-  id="dynamicMembershipCard"
-  class="btn"
-  style="background:#2f6fed;color:white;"
->
-  Membership Card
-</button>
-<button
-  type="button"
-  id="dynamicDeleteApplication"
-  class="btn"
-  style="background:#b42318;color:white;"
->
-  Delete Application
-</button>
+
+
       <button
         type="button"
-        id="dynamicCloseReview"
-        class="btn"
+        id="membershipCardBtn"
+        class="secondary"
+      >
+        Membership Card
+      </button>
+
+
+      <button
+        type="button"
+        id="deleteApplicationBtn"
+        class="secondary"
+        style="
+          background:#b42318;
+          color:white;
+        "
+      >
+        Delete Application
+      </button>
+
+
+      <button
+        type="button"
+        id="closeReviewBtn"
+        class="secondary"
       >
         Close
       </button>
+
     </div>
+
 
     <div
       id="reviewMessage"
-      style="margin-top:10px;"
+      style="
+        margin-top:12px;
+      "
     ></div>
+
   `;
+
 
   modal.classList.remove(
     "hidden"
@@ -1128,670 +1655,34 @@ function openApplicationModal(app) {
   modal.style.display =
     "block";
 
-  $("dynamicSaveReview")
-    ?.addEventListener(
-      "click",
-      saveReview
-    );
-  $("dynamicMembershipCard")
-  ?.addEventListener(
-    "click",
-    () => openMembershipCard(app)
-  );
-$("dynamicDeleteApplication")
-  ?.addEventListener(
-    "click",
-    () => deleteApplication(app.id)
-  );
-  $("dynamicCloseReview")
-    ?.addEventListener(
-      "click",
-      closeReviewModal
-    );
 
-  $("dynamicCloseModal")
-    ?.addEventListener(
-      "click",
-      closeReviewModal
-    );
+  $("saveReviewBtn").onclick =
+    saveReview;
 
-  $("closeModal")
-    ?.addEventListener(
-      "click",
-      closeReviewModal
-    );
-}
-// ============================================================
-// MEMBERSHIP CARD
-// ============================================================
-async function openMembershipCard(app)  {
-  if (
-    app.status !== "Approved" ||
-    !app.membership_no
-  ) {
-    alert(
-      "Membership cards are only available for approved members."
-    );
-    return;
-  }
 
-  const memberSince =
-    app.created_at
-      ? new Date(app.created_at).getFullYear()
-      : new Date().getFullYear();
+  $("membershipCardBtn").onclick =
+    () => {
+      openMembershipCard(
+        app
+      );
+    };
 
-  const memberName =
-    app.full_name || "Member";
 
-  const businessName =
-    app.business_name || "Not provided";
+  $("deleteApplicationBtn").onclick =
+    () => {
+      deleteApplication(
+        app.id
+      );
+    };
 
-  const processorGroup =
-    app.primary_group || "Not assigned";
 
-  const membershipNo =
-    app.membership_no;
-const verificationUrl =
-  `${window.location.origin}/api/public/verify/` +
-  encodeURIComponent(membershipNo);
-
-let qrDataUrl = "";
-
-try {
-  const qrHolder =
-    document.createElement("div");
-
-  qrHolder.style.position = "fixed";
-  qrHolder.style.left = "-9999px";
-  qrHolder.style.top = "-9999px";
-
-  document.body.appendChild(qrHolder);
-
-  new QRCode(qrHolder, {
-    text: verificationUrl,
-    width: 180,
-    height: 180,
-    correctLevel: QRCode.CorrectLevel.H
-  });
-
-  await new Promise(
-    resolve => setTimeout(resolve, 150)
-  );
-
-  const qrCanvas =
-    qrHolder.querySelector("canvas");
-
-  const qrImage =
-    qrHolder.querySelector("img");
-
-  if (qrCanvas) {
-    qrDataUrl =
-      qrCanvas.toDataURL("image/png");
-  } else if (qrImage) {
-    qrDataUrl =
-      qrImage.src;
-  }
-
-  qrHolder.remove();
-
-} catch (error) {
-  console.error(
-    "QR code generation failed:",
-    error
-  );
-}
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
-  >
-
-  <title>
-    TAPA Membership Card - ${esc(memberName)}
-  </title>
-
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    html,
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: Arial, Helvetica, sans-serif;
-      background: #ececf1;
-      color: #222;
-    }
-
-    body {
-      padding: 30px;
-    }
-
-    .card-wrap {
-      display: flex;
-      justify-content: center;
-    }
-
-    .member-card {
-      width: 856px;
-      min-height: 540px;
-      position: relative;
-      overflow: hidden;
-
-      background:
-        linear-gradient(
-          135deg,
-          #ffffff 0%,
-          #faf9ff 55%,
-          #f1edfb 100%
-        );
-
-      border-radius: 28px;
-      border: 1px solid #d8d3e8;
-
-      box-shadow:
-        0 18px 50px rgba(0,0,0,.20);
-    }
-
-    .top-band {
-      padding: 28px 34px;
-
-      background:
-        linear-gradient(
-          135deg,
-          #28155f,
-          #5633a8,
-          #744ec4
-        );
-
-      color: white;
-
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 18px;
-    }
-
-    .logo-box {
-      width: 82px;
-      height: 82px;
-
-      border-radius: 18px;
-
-      background:
-        rgba(255,255,255,.16);
-
-      border:
-        2px solid rgba(255,255,255,.45);
-
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      font-size: 27px;
-      font-weight: 900;
-    }
-
-    .brand-text h1 {
-      margin: 0;
-      font-size: 26px;
-      line-height: 1.15;
-    }
-
-    .brand-text p {
-      margin: 7px 0 0;
-
-      font-size: 13px;
-      letter-spacing: 1.5px;
-
-      text-transform: uppercase;
-    }
-
-    .active-badge {
-      background: white;
-      color: #21733b;
-
-      padding: 10px 16px;
-
-      border-radius: 30px;
-
-      font-size: 12px;
-      font-weight: 900;
-
-      white-space: nowrap;
-    }
-
-    .content {
-      padding: 34px 38px;
-    }
-
-    .official-label {
-      color: #6e6590;
-
-      font-size: 12px;
-      font-weight: 900;
-
-      letter-spacing: 1.7px;
-      text-transform: uppercase;
-    }
-
-    .member-name {
-      margin-top: 7px;
-      margin-bottom: 25px;
-
-      color: #231a3e;
-
-      font-size: 36px;
-      font-weight: 900;
-    }
-
-    .membership-strip {
-      padding: 17px 20px;
-      margin-bottom: 28px;
-
-      background: #eee9fb;
-
-      border-radius: 14px;
-      border-left: 6px solid #5633a8;
-
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .label {
-      color: #71678c;
-
-      font-size: 11px;
-      font-weight: 800;
-
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
-
-    .number {
-      margin-top: 4px;
-
-      color: #5633a8;
-
-      font-size: 24px;
-      font-weight: 900;
-    }
-
-    .member-since {
-      text-align: right;
-    }
-
-    .member-since strong {
-      display: block;
-      margin-top: 4px;
-      font-size: 18px;
-    }
-
-    .details {
-      display: grid;
-      grid-template-columns: 1.4fr 1fr;
-
-      gap: 20px 28px;
-    }
-
-    .detail {
-      padding-bottom: 12px;
-
-      border-bottom:
-        1px solid #ddd8e8;
-    }
-
-    .detail span {
-      display: block;
-      margin-bottom: 5px;
-
-      color: #777184;
-
-      font-size: 11px;
-      font-weight: 800;
-
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
-
-    .detail strong {
-      font-size: 17px;
-    }
-
-    .footer {
-      margin-top: 28px;
-      padding-top: 18px;
-
-      border-top:
-        1px solid #d8d3e3;
-
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .footer-text {
-      color: #675f74;
-      font-size: 12px;
-      line-height: 1.5;
-    }
-
-    .qr-box {
-  width: 112px;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-
-  text-align: center;
+  $("closeReviewBtn").onclick =
+    closeReviewModal;
 }
 
-.qr-box img {
-  width: 94px;
-  height: 94px;
-
-  display: block;
-  background: white;
-  padding: 4px;
-
-  border-radius: 7px;
-  border: 1px solid #d7d2e3;
-}
-
-.qr-box span {
-  display: block;
-  margin-top: 5px;
-
-  color: #5633a8;
-
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: .7px;
-}
-
-    .actions {
-      text-align: center;
-      margin-top: 24px;
-    }
-
-    .actions button {
-      margin: 5px;
-      padding: 12px 20px;
-
-      border: 0;
-      border-radius: 9px;
-
-      cursor: pointer;
-
-      font-size: 14px;
-      font-weight: 800;
-    }
-
-    .print {
-      background: #5633a8;
-      color: white;
-    }
-
-    .close {
-      background: #dddddd;
-      color: #222;
-    }
-
-    @media print {
-      body {
-        padding: 0;
-        background: white;
-      }
-
-      .member-card {
-        box-shadow: none;
-      }
-
-      .actions {
-        display: none;
-      }
-    }
-  </style>
-</head>
-
-<body>
-
-  <div class="card-wrap">
-
-    <div class="member-card">
-
-      <div class="top-band">
-
-        <div class="brand">
-
-          <div class="logo-box">
-            TAPA
-          </div>
-
-          <div class="brand-text">
-
-            <h1>
-              Tobago Agro-Processors Association
-            </h1>
-
-            <p>
-              Official Membership Card
-            </p>
-
-          </div>
-
-        </div>
-
-        <div class="active-badge">
-          ACTIVE MEMBER
-        </div>
-
-      </div>
-
-      <div class="content">
-
-        <div class="official-label">
-          Official Member
-        </div>
-
-        <div class="member-name">
-          ${esc(memberName)}
-        </div>
-
-        <div class="membership-strip">
-
-          <div>
-
-            <div class="label">
-              Membership Number
-            </div>
-
-            <div class="number">
-              ${esc(membershipNo)}
-            </div>
-
-          </div>
-
-          <div class="member-since">
-
-            <div class="label">
-              Member Since
-            </div>
-
-            <strong>
-              ${esc(memberSince)}
-            </strong>
-
-          </div>
-
-        </div>
-
-        <div class="details">
-
-          <div class="detail">
-
-            <span>
-              Business
-            </span>
-
-            <strong>
-              ${esc(businessName)}
-            </strong>
-
-          </div>
-
-          <div class="detail">
-
-            <span>
-              Processor Group
-            </span>
-
-            <strong>
-              ${esc(processorGroup)}
-            </strong>
-
-          </div>
-
-          <div class="detail">
-
-            <span>
-              Membership Status
-            </span>
-
-            <strong>
-              Approved
-            </strong>
-
-          </div>
-
-          <div class="detail">
-
-            <span>
-              Membership Type
-            </span>
-
-            <strong>
-              TAPA Member
-            </strong>
-
-          </div>
-
-        </div>
-
-        <div class="footer">
-
-          <div class="footer-text">
-
-            <strong>
-              Tobago Agro-Processors Association
-            </strong>
-
-            <br>
-
-            Digital Membership & Processor Registry
-
-          </div>
-
-         <div class="qr-box">
-
-  ${
-    qrDataUrl
-      ? `
-        <img
-          src="${qrDataUrl}"
-          alt="Verify TAPA Membership"
-        >
-
-        <span>
-          SCAN TO VERIFY
-        </span>
-      `
-      : `
-        <span>
-          Verification QR unavailable
-        </span>
-      `
-  }
-
-</div>
-
-        </div>
-
-      </div>
-
-    </div>
-
-  </div>
-
-  <div class="actions">
-
-    <button
-      class="print"
-      onclick="window.print()"
-    >
-      Print / Save as PDF
-    </button>
-
-    <button
-      class="close"
-      onclick="window.close()"
-    >
-      Close
-    </button>
-
-  </div>
-
-</body>
-</html>
-  `;
-
-  const blob = new Blob(
-    [html],
-    {
-      type: "text/html;charset=utf-8"
-    }
-  );
-
-  const cardUrl =
-    URL.createObjectURL(blob);
-
-  const cardWindow =
-    window.open(
-      cardUrl,
-      "_blank"
-    );
-
-  if (!cardWindow) {
-    URL.revokeObjectURL(cardUrl);
-
-    alert(
-      "Please allow pop-ups for this website to open the membership card."
-    );
-
-    return;
-  }
-
-  setTimeout(
-    () => URL.revokeObjectURL(cardUrl),
-    60000
-  );
-}
 
 // ============================================================
-// SAVE REVIEW
+// SAVE ADMIN REVIEW
 // ============================================================
 
 async function saveReview() {
@@ -1809,12 +1700,15 @@ async function saveReview() {
       ?.value ||
     "";
 
-  const message =
+  const target =
     $("reviewMessage");
 
-  if (message) {
-    message.textContent =
-      "Saving...";
+  if (target) {
+    target.innerHTML = `
+      <div class="message">
+        Saving changes...
+      </div>
+    `;
   }
 
   try {
@@ -1835,6 +1729,7 @@ async function saveReview() {
           body:
             JSON.stringify({
               status,
+              internalNotes,
               internal_notes:
                 internalNotes
             })
@@ -1851,11 +1746,30 @@ async function saveReview() {
       );
     }
 
-    if (message) {
-      message.innerHTML =
-        `<strong>
-          Saved successfully.
-        </strong>`;
+    if (target) {
+      target.innerHTML = `
+        <div class="message success">
+          Application updated successfully.
+
+          ${
+            result.membershipNo
+              ? `
+
+                <br><br>
+
+                Membership Number:
+
+                <strong>
+                  ${esc(
+                    result.membershipNo
+                  )}
+                </strong>
+
+              `
+              : ""
+          }
+        </div>
+      `;
     }
 
     await Promise.all([
@@ -1869,11 +1783,11 @@ async function saveReview() {
       err
     );
 
-    if (message) {
-      message.innerHTML = `
-        <span>
+    if (target) {
+      target.innerHTML = `
+        <div class="message error">
           ${esc(err.message)}
-        </span>
+        </div>
       `;
     }
   }
@@ -1881,41 +1795,83 @@ async function saveReview() {
 
 
 window.saveReview =
-  saveReview;
+  saveReview;// ============================================================
+// DELETE APPLICATION
+// ============================================================
 
 async function deleteApplication(id) {
-  const confirmed = confirm(
-    "Are you sure you want to permanently delete this application? This cannot be undone."
-  );
+  const applicationId =
+    Number(
+      id ||
+      currentApplicationId
+    );
 
-  if (!confirmed) return;
+  if (!applicationId) {
+    alert(
+      "No application selected."
+    );
+
+    return;
+  }
+
+  const confirmed =
+    confirm(
+      "Are you sure you want to permanently delete this application?\n\n" +
+      "This action cannot be undone."
+    );
+
+  if (!confirmed) {
+    return;
+  }
 
   try {
-    const response = await fetch(`/api/admin/applications/${id}`, {
-      method: "DELETE"
-    });
+    const response =
+      await fetch(
+        `/api/admin/applications/${applicationId}`,
+        {
+          method: "DELETE",
+          credentials:
+            "same-origin"
+        }
+      );
 
-    const data = await response.json();
+    const data =
+      await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || "Unable to delete application");
+      throw new Error(
+        data.error ||
+        "Unable to delete application."
+      );
     }
 
-    alert("Application deleted successfully.");
+    alert(
+      "Application deleted successfully."
+    );
 
     closeReviewModal();
+
     await Promise.all([
-  loadDashboard(),
-  loadApplications()
-]);
+      loadDashboard(),
+      loadApplications()
+    ]);
 
   } catch (err) {
-    console.error("Delete application error:", err);
-    alert(err.message || "Unable to delete application");
+    console.error(
+      "Delete application error:",
+      err
+    );
+
+    alert(
+      err.message ||
+      "Unable to delete application."
+    );
   }
 }
 
-window.deleteApplication = deleteApplication;
+
+window.deleteApplication =
+  deleteApplication;
 
 
 // ============================================================
@@ -1926,7 +1882,9 @@ function closeReviewModal() {
   const modal =
     $("modal");
 
-  if (!modal) return;
+  if (!modal) {
+    return;
+  }
 
   modal.classList.add(
     "hidden"
@@ -1951,19 +1909,895 @@ if ($("closeModal")) {
 
 
 // ============================================================
-// PROCESSOR GROUPS IN ADMIN
+// MEMBERSHIP CARD
+// ============================================================
+
+function openMembershipCard(app) {
+  if (
+    app.status !== "Approved" ||
+    !app.membership_no
+  ) {
+    alert(
+      "Membership cards are only available for approved members."
+    );
+
+    return;
+  }
+
+  const membershipNo =
+    String(
+      app.membership_no
+    );
+
+  const verificationUrl =
+    `${window.location.origin}/api/public/verify/` +
+    encodeURIComponent(
+      membershipNo
+    );
+
+  createMembershipQRCode(
+    verificationUrl
+  )
+    .then(
+      (qrDataUrl) => {
+        renderMembershipCard(
+          app,
+          qrDataUrl,
+          verificationUrl
+        );
+      }
+    )
+    .catch(
+      (err) => {
+        console.error(
+          "QR generation error:",
+          err
+        );
+
+        alert(
+          "Unable to generate the membership QR code."
+        );
+      }
+    );
+}
+
+
+window.openMembershipCard =
+  openMembershipCard;
+
+
+// ============================================================
+// CREATE MEMBERSHIP QR CODE
+// ============================================================
+
+function createMembershipQRCode(
+  verificationUrl
+) {
+  return new Promise(
+    (resolve, reject) => {
+      try {
+        if (
+          typeof QRCode ===
+          "undefined"
+        ) {
+          reject(
+            new Error(
+              "QRCode library is not loaded."
+            )
+          );
+
+          return;
+        }
+
+        const qrHost =
+          document.createElement(
+            "div"
+          );
+
+        qrHost.style.position =
+          "fixed";
+
+        qrHost.style.left =
+          "-10000px";
+
+        qrHost.style.top =
+          "-10000px";
+
+        qrHost.style.width =
+          "180px";
+
+        qrHost.style.height =
+          "180px";
+
+        qrHost.style.background =
+          "#ffffff";
+
+        qrHost.style.padding =
+          "10px";
+
+        document.body.appendChild(
+          qrHost
+        );
+
+        new QRCode(
+          qrHost,
+          {
+            text:
+              verificationUrl,
+
+            width: 180,
+            height: 180,
+
+            correctLevel:
+              QRCode
+                .CorrectLevel
+                .H
+          }
+        );
+
+        setTimeout(
+          () => {
+            try {
+              const canvas =
+                qrHost.querySelector(
+                  "canvas"
+                );
+
+              const image =
+                qrHost.querySelector(
+                  "img"
+                );
+
+              let dataUrl =
+                "";
+
+              if (canvas) {
+                dataUrl =
+                  canvas.toDataURL(
+                    "image/png"
+                  );
+              } else if (
+                image &&
+                image.src
+              ) {
+                dataUrl =
+                  image.src;
+              }
+
+              qrHost.remove();
+
+              if (!dataUrl) {
+                reject(
+                  new Error(
+                    "QR image was not created."
+                  )
+                );
+
+                return;
+              }
+
+              resolve(
+                dataUrl
+              );
+
+            } catch (err) {
+              qrHost.remove();
+
+              reject(err);
+            }
+          },
+          250
+        );
+
+      } catch (err) {
+        reject(err);
+      }
+    }
+  );
+}
+
+
+// ============================================================
+// MEMBERSHIP CARD HTML
+// ============================================================
+
+function renderMembershipCard(
+  app,
+  qrDataUrl,
+  verificationUrl
+) {
+  const memberName =
+    app.full_name ||
+    "TAPA Member";
+
+  const membershipNo =
+    app.membership_no ||
+    "";
+
+  const businessName =
+    app.business_name ||
+    "Not Provided";
+
+  const primaryGroup =
+    app.primary_group ||
+    "Not Provided";
+
+  const memberSince =
+    formatMemberSince(
+      app.created_at
+    );
+
+  const html = `
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+>
+
+<title>
+  TAPA Membership Card -
+  ${esc(memberName)}
+</title>
+
+<style>
+
+  * {
+    box-sizing:
+      border-box;
+  }
+
+  body {
+    margin: 0;
+    padding: 30px 15px;
+    background:
+      #eef2ef;
+    font-family:
+      Arial,
+      Helvetica,
+      sans-serif;
+    color:
+      #16251a;
+  }
+
+  .page {
+    max-width:
+      820px;
+    margin:
+      0 auto;
+  }
+
+  .card {
+    width:
+      100%;
+    max-width:
+      760px;
+    min-height:
+      430px;
+    margin:
+      0 auto;
+    background:
+      linear-gradient(
+        135deg,
+        #ffffff 0%,
+        #f7fbf7 100%
+      );
+    border:
+      2px solid #1f6d3d;
+    border-radius:
+      22px;
+    overflow:
+      hidden;
+    box-shadow:
+      0 18px 45px
+      rgba(
+        0,
+        0,
+        0,
+        0.16
+      );
+  }
+
+  .top {
+    background:
+      #1f6d3d;
+    color:
+      white;
+    padding:
+      24px 28px;
+    display:
+      flex;
+    justify-content:
+      space-between;
+    align-items:
+      center;
+    gap:
+      20px;
+  }
+
+  .association {
+    font-size:
+      14px;
+    letter-spacing:
+      1px;
+    text-transform:
+      uppercase;
+    opacity:
+      0.95;
+  }
+
+  .title {
+    font-size:
+      27px;
+    font-weight:
+      800;
+    margin-top:
+      5px;
+  }
+
+  .active {
+    background:
+      white;
+    color:
+      #1f6d3d;
+    font-size:
+      12px;
+    font-weight:
+      800;
+    padding:
+      9px 13px;
+    border-radius:
+      999px;
+    white-space:
+      nowrap;
+  }
+
+  .content {
+    display:
+      grid;
+    grid-template-columns:
+      1fr 200px;
+    gap:
+      25px;
+    padding:
+      30px;
+  }
+
+  .member-label {
+    color:
+      #68766c;
+    font-size:
+      12px;
+    font-weight:
+      700;
+    text-transform:
+      uppercase;
+    letter-spacing:
+      0.6px;
+    margin-bottom:
+      4px;
+  }
+
+  .member-name {
+    font-size:
+      30px;
+    line-height:
+      1.15;
+    font-weight:
+      800;
+    margin-bottom:
+      25px;
+  }
+
+  .info-grid {
+    display:
+      grid;
+    grid-template-columns:
+      1fr 1fr;
+    gap:
+      18px 25px;
+  }
+
+  .value {
+    font-size:
+      16px;
+    font-weight:
+      700;
+    line-height:
+      1.35;
+  }
+
+  .membership-number {
+    color:
+      #1f6d3d;
+    font-size:
+      20px;
+    font-weight:
+      800;
+  }
+
+  .qr-area {
+    display:
+      flex;
+    flex-direction:
+      column;
+    align-items:
+      center;
+    justify-content:
+      center;
+    text-align:
+      center;
+    border-left:
+      1px solid #d8e1da;
+    padding-left:
+      25px;
+  }
+
+  .qr {
+    width:
+      170px;
+    height:
+      170px;
+    background:
+      white;
+    padding:
+      8px;
+    border:
+      1px solid #ccd8cf;
+    border-radius:
+      12px;
+  }
+
+  .qr img {
+    display:
+      block;
+    width:
+      100%;
+    height:
+      100%;
+  }
+
+  .verify {
+    margin-top:
+      10px;
+    font-size:
+      12px;
+    color:
+      #5f6d63;
+    line-height:
+      1.35;
+  }
+
+  .footer {
+    padding:
+      16px 28px;
+    border-top:
+      1px solid #dce5de;
+    display:
+      flex;
+    justify-content:
+      space-between;
+    align-items:
+      center;
+    gap:
+      15px;
+    font-size:
+      12px;
+    color:
+      #5d6a60;
+  }
+
+  .footer strong {
+    color:
+      #1f6d3d;
+  }
+
+  .controls {
+    max-width:
+      760px;
+    margin:
+      20px auto 0;
+    display:
+      flex;
+    gap:
+      10px;
+    justify-content:
+      center;
+    flex-wrap:
+      wrap;
+  }
+
+  button {
+    border:
+      0;
+    border-radius:
+      10px;
+    padding:
+      11px 18px;
+    cursor:
+      pointer;
+    font-size:
+      14px;
+    font-weight:
+      700;
+  }
+
+  .print {
+    background:
+      #1f6d3d;
+    color:
+      white;
+  }
+
+  .close {
+    background:
+      #dfe5e0;
+    color:
+      #243328;
+  }
+
+  @media (
+    max-width: 650px
+  ) {
+
+    body {
+      padding:
+        15px 8px;
+    }
+
+    .top {
+      align-items:
+        flex-start;
+      flex-direction:
+        column;
+    }
+
+    .content {
+      grid-template-columns:
+        1fr;
+    }
+
+    .qr-area {
+      border-left:
+        0;
+      border-top:
+        1px solid #d8e1da;
+      padding-left:
+        0;
+      padding-top:
+        25px;
+    }
+
+    .info-grid {
+      grid-template-columns:
+        1fr;
+    }
+
+  }
+
+  @media print {
+
+    body {
+      background:
+        white;
+      padding:
+        0;
+    }
+
+    .controls {
+      display:
+        none !important;
+    }
+
+    .card {
+      box-shadow:
+        none;
+      max-width:
+        none;
+    }
+
+  }
+
+</style>
+
+</head>
+
+
+<body>
+
+<div class="page">
+
+  <div class="card">
+
+    <div class="top">
+
+      <div>
+
+        <div class="association">
+          Tobago Agro-Processors Association
+        </div>
+
+        <div class="title">
+          Official Member
+        </div>
+
+      </div>
+
+
+      <div class="active">
+        ACTIVE MEMBER
+      </div>
+
+    </div>
+
+
+    <div class="content">
+
+      <div>
+
+        <div class="member-label">
+          Member Name
+        </div>
+
+        <div class="member-name">
+          ${esc(memberName)}
+        </div>
+
+
+        <div class="info-grid">
+
+          <div>
+
+            <div class="member-label">
+              Membership Number
+            </div>
+
+            <div class="membership-number">
+              ${esc(membershipNo)}
+            </div>
+
+          </div>
+
+
+          <div>
+
+            <div class="member-label">
+              Member Since
+            </div>
+
+            <div class="value">
+              ${esc(memberSince)}
+            </div>
+
+          </div>
+
+
+          <div>
+
+            <div class="member-label">
+              Business
+            </div>
+
+            <div class="value">
+              ${esc(businessName)}
+            </div>
+
+          </div>
+
+
+          <div>
+
+            <div class="member-label">
+              Processor Group
+            </div>
+
+            <div class="value">
+              ${esc(primaryGroup)}
+            </div>
+
+          </div>
+
+
+          <div>
+
+            <div class="member-label">
+              Membership Status
+            </div>
+
+            <div class="value">
+              Approved
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div class="qr-area">
+
+        <div class="qr">
+
+          <img
+            src="${qrDataUrl}"
+            alt="Membership verification QR code"
+          >
+
+        </div>
+
+        <div class="verify">
+          Scan QR code to verify
+          TAPA membership.
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div class="footer">
+
+      <div>
+        <strong>
+          Tobago Agro-Processors Association
+        </strong>
+      </div>
+
+      <div>
+        Membership verification enabled
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <div class="controls">
+
+    <button
+      class="print"
+      onclick="window.print()"
+    >
+      Print / Save as PDF
+    </button>
+
+
+    <button
+      class="close"
+      onclick="window.close()"
+    >
+      Close
+    </button>
+
+  </div>
+
+</div>
+
+
+<script>
+
+  console.log(
+    "TAPA Membership Verification:",
+    ${JSON.stringify(verificationUrl)}
+  );
+
+<\/script>
+
+</body>
+
+</html>
+  `;
+
+
+  const blob =
+    new Blob(
+      [html],
+      {
+        type:
+          "text/html;charset=utf-8"
+      }
+    );
+
+
+  const cardUrl =
+    URL.createObjectURL(
+      blob
+    );
+
+
+  const cardWindow =
+    window.open(
+      cardUrl,
+      "_blank"
+    );
+
+
+  if (!cardWindow) {
+    URL.revokeObjectURL(
+      cardUrl
+    );
+
+    alert(
+      "Your browser blocked the membership card window. Please allow pop-ups for this website."
+    );
+
+    return;
+  }
+
+
+  setTimeout(
+    () => {
+      URL.revokeObjectURL(
+        cardUrl
+      );
+    },
+    60000
+  );
+}
+
+
+// ============================================================
+// FORMAT MEMBER SINCE
+// ============================================================
+
+function formatMemberSince(
+  value
+) {
+  if (!value) {
+    return "-";
+  }
+
+  const date =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return String(value);
+  }
+
+  return date.toLocaleDateString(
+    "en-TT",
+    {
+      year: "numeric",
+      month: "long"
+    }
+  );
+}// ============================================================
+// ADMIN PROCESSOR GROUP MANAGEMENT
 // ============================================================
 
 async function loadAdminCategories() {
   const target =
     $("categoryAdmin");
 
-  if (!target) return;
+  if (!target) {
+    return;
+  }
+
+  target.innerHTML = `
+    <div class="message">
+      Loading processor groups...
+    </div>
+  `;
 
   try {
     const response =
       await fetch(
-        "/api/public/categories"
+        "/api/admin/categories",
+        {
+          credentials:
+            "same-origin"
+        }
       );
 
     const categories =
@@ -1971,43 +2805,133 @@ async function loadAdminCategories() {
 
     if (!response.ok) {
       throw new Error(
+        categories.error ||
         "Could not load processor groups."
       );
+    }
+
+    if (
+      !Array.isArray(categories) ||
+      categories.length === 0
+    ) {
+      target.innerHTML = `
+        <div class="message">
+          No processor groups found.
+        </div>
+      `;
+
+      return;
     }
 
     target.innerHTML =
       categories
         .map(
-          (category) => `
-            <span
-              class="chip"
-              style="
-                display:inline-block;
-                margin:4px;
-                padding:6px 10px;
-              "
-            >
-              ${esc(
-                category.name
-              )}
-            </span>
-          `
+          (category) => {
+            const active =
+              category.active === 1 ||
+              category.active === true ||
+              category.enabled === 1 ||
+              category.enabled === true;
+
+            return `
+              <div
+                style="
+                  display:flex;
+                  align-items:center;
+                  justify-content:space-between;
+                  gap:12px;
+                  padding:10px 0;
+                  border-bottom:1px solid #e3e3e3;
+                "
+              >
+
+                <div>
+                  <strong>
+                    ${esc(category.name)}
+                  </strong>
+
+                  <div
+                    style="
+                      font-size:12px;
+                      margin-top:3px;
+                      color:#666;
+                    "
+                  >
+                    ${
+                      active
+                        ? "Active"
+                        : "Disabled"
+                    }
+                  </div>
+                </div>
+
+
+                <button
+                  type="button"
+                  class="secondary category-toggle-btn"
+                  data-id="${Number(category.id)}"
+                  data-active="${
+                    active
+                      ? "1"
+                      : "0"
+                  }"
+                >
+                  ${
+                    active
+                      ? "Disable"
+                      : "Enable"
+                  }
+                </button>
+
+              </div>
+            `;
+          }
         )
         .join("");
 
+
+    target
+      .querySelectorAll(
+        ".category-toggle-btn"
+      )
+      .forEach(
+        (button) => {
+          button.onclick =
+            async () => {
+              const id =
+                Number(
+                  button.dataset.id
+                );
+
+              const currentlyActive =
+                button.dataset.active ===
+                "1";
+
+              await updateAdminCategory(
+                id,
+                !currentlyActive
+              );
+            };
+        }
+      );
+
   } catch (err) {
     console.error(
+      "Admin category error:",
       err
     );
+
+    target.innerHTML = `
+      <div class="message error">
+        ${esc(err.message)}
+      </div>
+    `;
   }
 }
 
 
 // ============================================================
-// ADD GROUP
-//
-// Current Worker does not yet have an admin category-create API.
-// This prevents the button from silently doing nothing.
+// ADD PROCESSOR GROUP
 // ============================================================
 
 const addCategoryBtn =
@@ -2015,11 +2939,133 @@ const addCategoryBtn =
 
 if (addCategoryBtn) {
   addCategoryBtn.onclick =
-    () => {
-      alert(
-        "The membership and review system is working. Adding new processor groups will be connected next."
-      );
+    async () => {
+      const name =
+        prompt(
+          "Enter the new processor group name:"
+        );
+
+      if (
+        !name ||
+        !name.trim()
+      ) {
+        return;
+      }
+
+      try {
+        const response =
+          await fetch(
+            "/api/admin/categories",
+            {
+              method: "POST",
+
+              credentials:
+                "same-origin",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body:
+                JSON.stringify({
+                  name:
+                    name.trim()
+                })
+            }
+          );
+
+        const result =
+          await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            result.error ||
+            "Could not add processor group."
+          );
+        }
+
+        alert(
+          "Processor group added successfully."
+        );
+
+        await Promise.all([
+          loadAdminCategories(),
+          loadCategories()
+        ]);
+
+      } catch (err) {
+        console.error(
+          "Add category error:",
+          err
+        );
+
+        alert(
+          err.message ||
+          "Could not add processor group."
+        );
+      }
     };
+}
+
+
+// ============================================================
+// ENABLE / DISABLE PROCESSOR GROUP
+// ============================================================
+
+async function updateAdminCategory(
+  id,
+  active
+) {
+  try {
+    const response =
+      await fetch(
+        `/api/admin/categories/${id}`,
+        {
+          method: "PATCH",
+
+          credentials:
+            "same-origin",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body:
+            JSON.stringify({
+              active,
+              enabled: active
+            })
+        }
+      );
+
+    const result =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        result.error ||
+        "Could not update processor group."
+      );
+    }
+
+    await Promise.all([
+      loadAdminCategories(),
+      loadCategories()
+    ]);
+
+  } catch (err) {
+    console.error(
+      "Update category error:",
+      err
+    );
+
+    alert(
+      err.message ||
+      "Could not update processor group."
+    );
+  }
 }
 
 
@@ -2033,27 +3079,73 @@ const exportBtn =
 
 if (exportBtn) {
   exportBtn.onclick =
-    () => {
+    (event) => {
+      event.preventDefault();
+
       window.location.href =
-        "/api/admin/export";
+        "/api/admin/export.csv";
     };
 }
 
 
 // ============================================================
-// HELPERS
+// GENERAL HELPERS
 // ============================================================
 
 function setText(
   id,
   value
 ) {
-  const el = $(id);
+  const el =
+    $(id);
 
   if (el) {
     el.textContent =
       value ?? 0;
   }
+}
+
+
+// ============================================================
+// SERVICE WORKER
+// ============================================================
+
+function registerServiceWorker() {
+  if (
+    !("serviceWorker" in navigator)
+  ) {
+    return;
+  }
+
+  window.addEventListener(
+    "load",
+    () => {
+      navigator
+        .serviceWorker
+        .register(
+          "/sw.js"
+        )
+        .catch(
+          (err) => {
+            console.error(
+              "Service worker registration failed:",
+              err
+            );
+          }
+        );
+    }
+  );
+}
+
+
+// ============================================================
+// INITIALIZE CONDITIONAL FIELDS
+// ============================================================
+
+function initializeConditionalFields() {
+  updateBusinessTypeOther();
+  updateBusinessDescriptionOther();
+  updateCredentialOther();
 }
 
 
@@ -2064,7 +3156,10 @@ function setText(
 (async function init() {
   await loadCategories();
 
-  // Default view
+  initializeConditionalFields();
+
+  registerServiceWorker();
+
   if ($("home")) {
     openView("home");
   }
