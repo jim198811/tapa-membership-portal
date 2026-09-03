@@ -1,45 +1,1390 @@
 <!doctype html>
-<html lang="en"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#5b35b5"><link rel="manifest" href="/manifest.webmanifest">
-<title>TAPA Membership Portal</title><link rel="stylesheet" href="/styles.css"></head>
-<body><div class="topbar"></div>
-<header><div class="container brandrow"><div class="logo">TAPA</div><div><h1>Tobago Agro Processors Association</h1><p>Digital Membership & Processor Registry</p></div></div>
-<nav class="container"><button data-view="home" class="nav active">Home</button><button data-view="apply" class="nav">Apply</button><button data-view="status" class="nav">Check Status</button><button data-view="admin" class="nav">Admin</button><button id="shareBtn" class="nav">Share</button></nav></header>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1,viewport-fit=cover"
+  >
+
+  <meta
+    name="theme-color"
+    content="#5b35b5"
+  >
+
+  <link
+    rel="manifest"
+    href="/manifest.webmanifest"
+  >
+
+  <title>
+    TAPA Membership Portal
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="/styles.css"
+  >
+</head>
+
+
+<body>
+
+<div class="topbar"></div>
+
+
+<header>
+
+  <div class="container brandrow">
+
+    <div class="logo">
+      TAPA
+    </div>
+
+    <div>
+
+      <h1>
+        Tobago Agro Processors Association
+      </h1>
+
+      <p>
+        Digital Membership & Processor Registry
+      </p>
+
+    </div>
+
+  </div>
+
+
+  <nav class="container">
+
+    <button
+      data-view="home"
+      class="nav active"
+    >
+      Home
+    </button>
+
+    <button
+      data-view="apply"
+      class="nav"
+    >
+      Apply
+    </button>
+
+    <button
+      data-view="status"
+      class="nav"
+    >
+      Check Status
+    </button>
+
+    <button
+      data-view="admin"
+      class="nav"
+    >
+      Admin
+    </button>
+
+    <button
+      id="shareBtn"
+      class="nav"
+    >
+      Share
+    </button>
+
+  </nav>
+
+</header>
+
+
 <main class="container">
-<section id="home" class="view"><div class="hero card"><span class="eyebrow">TAPA MEMBERSHIP PORTAL</span><h2>Register. Get classified. Stay connected.</h2><p>Apply for membership, identify your processor group, tell TAPA what support your business needs, and track your application.</p><div class="actions"><button class="primary" onclick="openView('apply')">Start Registration</button><button class="secondary" onclick="openView('status')">Check Application</button></div></div>
-<div class="grid3"><div class="card mini"><b>Processor Registry</b><p>Dairy, dried foods, skincare, sauces, beverages, honey and more.</p></div><div class="card mini"><b>Membership Tracking</b><p>Every applicant receives a unique TAPA application number.</p></div><div class="card mini"><b>Business Support</b><p>Track training, certification, marketing, financing and export needs.</p></div></div></section>
 
-<section id="apply" class="view hidden"><div class="card"><h2>Membership Registration Form</h2><p class="muted">Fields marked * are required.</p></div>
-<form id="applicationForm" enctype="multipart/form-data">
-<div class="card"><h3>1. Personal Information</h3><div class="grid2">
-<label>Full Name *<input name="fullName" required></label><label>Gender<select name="gender"><option></option><option>Male</option><option>Female</option><option>Prefer not to say</option></select></label>
-<label>Age Group<select name="ageGroup"><option></option><option>18–25</option><option>26–35</option><option>36–45</option><option>46–55</option><option>56 and over</option></select></label><label>Identification Card / ID Number<input name="idNumber"></label>
-<label class="wide">Address *<textarea name="address" required></textarea></label><label class="wide">Mailing Address (if different)<textarea name="mailingAddress"></textarea></label>
-<label>Phone Contact *<input name="phone" required></label><label>Email Address *<input type="email" name="email" required></label></div></div>
-<div class="card"><h3>2. Business Information</h3><div class="grid2"><label>Do you have a registered business? *<select name="registeredBusiness"><option>Yes</option><option>No</option></select></label><label>Business Name<input name="businessName"></label>
-<label>Business Type<select name="businessType"><option>Sole Trader</option><option>Limited Liability</option><option>Partnership</option><option>Cooperative</option><option>Community Group</option><option>Other</option></select></label><label>What best describes your business?<select name="businessDescription"><option>Agro-processing</option><option>Farming</option><option>Bee Keeper</option><option>Floriculture</option><option>Other</option></select></label></div></div>
-<div class="card"><h3>3. Processor Classification</h3><p class="muted">Select every group that applies, then select your primary group.</p><div id="categoryList" class="checkgrid"></div><div class="grid2 below"><label>Primary Processor Group *<select name="primaryGroup" id="primaryGroup" required></select></label><label>Main Products<textarea name="products" placeholder="Example: cheese, dried mango, pepper sauce, body butter..."></textarea></label></div></div>
-<div class="card"><h3>4. Business Experience & Credentials</h3><label>How long have you been in business?<select name="yearsBusiness"><option>1–5 years</option><option>5–10 years</option><option>10 years and over</option></select></label><p><b>What do you currently have?</b></p><div id="credentialList" class="checkgrid"></div></div>
-<div class="card"><h3>5. Support Required</h3><p>What areas in your business require support?</p><div id="supportList" class="checkgrid"></div><label class="below">What would you like to see from the Association as a member?<textarea name="expectations"></textarea></label></div>
-<div class="card"><h3>6. Supporting Documents</h3><p class="muted">Optional. Upload up to 6 PDF/JPG/PNG/WEBP files, maximum 8 MB each.</p><input type="file" name="documents" multiple accept=".pdf,.jpg,.jpeg,.png,.webp"></div>
-<div class="card"><h3>7. Declaration</h3><label>Typed Signature Name *<input name="signatureName" required></label><label class="consent"><input type="checkbox" name="declaration" value="yes" required> I confirm that the information provided is accurate and consent to its use for TAPA membership administration.</label><br><br><button class="primary" type="submit">Submit Registration</button><div id="formMsg"></div></div>
-</form></section>
 
-<section id="status" class="view hidden"><div class="card narrow"><h2>Check Application Status</h2><label>Application Number<input id="statusNo" placeholder="TAPA-2026-00001"></label><label>Email Address<input id="statusEmail" type="email"></label><button id="checkStatusBtn" class="primary">Check Status</button><div id="statusResult"></div></div></section>
+<!-- =============================== -->
+<!-- HOME -->
+<!-- =============================== -->
 
-<section id="admin" class="view hidden"><div id="adminLogin" class="card narrow"><h2>TAPA Administrator</h2><label>Email<input id="adminEmail" type="email"></label><label>Password<input id="adminPassword" type="password"></label><button id="loginBtn" class="primary">Sign In</button><div id="loginMsg"></div></div>
-<div id="adminPanel" class="hidden"><div class="adminbar"><h2>Admin Dashboard</h2><div><a class="button secondary" href="/api/admin/export.csv">Export CSV</a> <button id="logoutBtn" class="secondary">Sign Out</button></div></div>
-<div class="stats"><div class="stat"><span>Total</span><b id="stTotal">0</b></div><div class="stat"><span>Pending</span><b id="stPending">0</b></div><div class="stat"><span>Under Review</span><b id="stReview">0</b></div><div class="stat"><span>Approved</span><b id="stApproved">0</b></div></div>
-<div class="card"><div class="toolbar"><input id="searchApps" placeholder="Search name, business or application #"><select id="filterStatus"><option value="">All statuses</option><option>Pending</option><option>Under Review</option><option>Approved</option><option>Rejected</option><option>More Information Required</option></select><button id="searchBtn" class="secondary">Search</button></div><div class="scroll"><table><thead><tr><th>Application</th><th>Name</th><th>Business</th><th>Group</th><th>Status</th><th></th></tr></thead><tbody id="appRows"></tbody></table></div></div>
-<div class="card"><h3>Processor Groups</h3><div class="toolbar"><input id="newCategory" placeholder="Add a new processor group"><button id="addCategoryBtn" class="secondary">Add Group</button></div><div id="categoryAdmin" class="chips"></div></div></div></section>
+<section
+  id="home"
+  class="view"
+>
+
+  <div class="hero card">
+
+    <span class="eyebrow">
+      TAPA MEMBERSHIP PORTAL
+    </span>
+
+    <h2>
+      Register. Get classified. Stay connected.
+    </h2>
+
+    <p>
+      Apply for membership, identify your processor group,
+      tell TAPA about your business, production capacity,
+      market goals and support needs, and track your application.
+    </p>
+
+    <div class="actions">
+
+      <button
+        class="primary"
+        onclick="openView('apply')"
+      >
+        Start Registration
+      </button>
+
+      <button
+        class="secondary"
+        onclick="openView('status')"
+      >
+        Check Application
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <div class="grid3">
+
+    <div class="card mini">
+
+      <b>
+        Processor Registry
+      </b>
+
+      <p>
+        Dairy, dried foods, skincare, sauces,
+        beverages, honey and many other processor groups.
+      </p>
+
+    </div>
+
+
+    <div class="card mini">
+
+      <b>
+        Membership Tracking
+      </b>
+
+      <p>
+        Every applicant receives a unique TAPA application number.
+      </p>
+
+    </div>
+
+
+    <div class="card mini">
+
+      <b>
+        Business Development
+      </b>
+
+      <p>
+        Help TAPA understand your training,
+        certification, production, financing,
+        marketing and export needs.
+      </p>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+
+<!-- =============================== -->
+<!-- APPLICATION FORM -->
+<!-- =============================== -->
+
+<section
+  id="apply"
+  class="view hidden"
+>
+
+  <div class="card">
+
+    <h2>
+      TAPA Membership Registration Form
+    </h2>
+
+    <p class="muted">
+      Please complete the form as accurately as possible.
+      Fields marked * are required.
+    </p>
+
+  </div>
+
+
+  <form
+    id="applicationForm"
+    enctype="multipart/form-data"
+  >
+
+
+    <!-- PERSONAL INFORMATION -->
+
+    <div class="card">
+
+      <h3>
+        1. Personal Information
+      </h3>
+
+
+      <div class="grid2">
+
+        <label>
+
+          Full Name *
+
+          <input
+            name="fullName"
+            required
+          >
+
+        </label>
+
+
+        <label>
+
+          Gender
+
+          <select name="gender">
+
+            <option></option>
+
+            <option>
+              Male
+            </option>
+
+            <option>
+              Female
+            </option>
+
+            <option>
+              Prefer not to say
+            </option>
+
+          </select>
+
+        </label>
+
+
+        <label>
+
+          Age Group
+
+          <select name="ageGroup">
+
+            <option></option>
+
+            <option>
+              18–25
+            </option>
+
+            <option>
+              26–35
+            </option>
+
+            <option>
+              36–45
+            </option>
+
+            <option>
+              46–55
+            </option>
+
+            <option>
+              56 and over
+            </option>
+
+          </select>
+
+        </label>
+
+
+        <label>
+
+          Identification Card / ID Number
+
+          <input
+            name="idNumber"
+          >
+
+        </label>
+
+
+        <label class="wide">
+
+          Residential Address *
+
+          <textarea
+            name="address"
+            required
+          ></textarea>
+
+        </label>
+
+
+        <label class="wide">
+
+          Production Address
+
+          <textarea
+            name="mailingAddress"
+            placeholder="Enter the address where production or processing takes place."
+          ></textarea>
+
+        </label>
+
+
+        <label>
+
+          Phone Contact *
+
+          <input
+            name="phone"
+            required
+          >
+
+        </label>
+
+
+        <label>
+
+          Email Address *
+
+          <input
+            type="email"
+            name="email"
+            required
+          >
+
+        </label>
+
+      </div>
+
+    </div>
+
+
+
+    <!-- BUSINESS INFORMATION -->
+
+    <div class="card">
+
+      <h3>
+        2. Business Information
+      </h3>
+
+
+      <div class="grid2">
+
+        <label>
+
+          Do you have a registered business? *
+
+          <select
+            name="registeredBusiness"
+          >
+
+            <option>
+              Yes
+            </option>
+
+            <option>
+              No
+            </option>
+
+          </select>
+
+        </label>
+
+
+        <label>
+
+          Business Name
+
+          <input
+            name="businessName"
+          >
+
+        </label>
+
+
+        <label>
+
+          Business Type
+
+          <select
+            name="businessType"
+            id="businessType"
+          >
+
+            <option>
+              Sole Trader
+            </option>
+
+            <option>
+              Limited Liability
+            </option>
+
+            <option>
+              Partnership
+            </option>
+
+            <option>
+              Cooperative
+            </option>
+
+            <option>
+              Community Group
+            </option>
+
+            <option>
+              Other
+            </option>
+
+          </select>
+
+        </label>
+
+
+        <label>
+
+          What best describes your business?
+
+          <select
+            name="businessDescription"
+            id="businessDescription"
+          >
+
+            <option>
+              Agro-processing
+            </option>
+
+            <option>
+              Farming
+            </option>
+
+            <option>
+              Bee Keeper
+            </option>
+
+            <option>
+              Floriculture
+            </option>
+
+            <option>
+              Other
+            </option>
+
+          </select>
+
+        </label>
+
+      </div>
+
+
+      <div
+        id="businessTypeOtherWrap"
+        class="below hidden"
+      >
+
+        <label>
+
+          Please specify other business type
+
+          <input
+            type="text"
+            name="businessTypeOther"
+            id="businessTypeOther"
+            placeholder="Enter other business type"
+          >
+
+        </label>
+
+      </div>
+
+
+      <div
+        id="businessDescriptionOtherWrap"
+        class="below hidden"
+      >
+
+        <label>
+
+          Please specify other business description
+
+          <input
+            type="text"
+            name="businessDescriptionOther"
+            id="businessDescriptionOther"
+            placeholder="Describe your business"
+          >
+
+        </label>
+
+      </div>
+
+    </div>
+
+
+
+    <!-- PROCESSOR CLASSIFICATION -->
+
+    <div class="card">
+
+      <h3>
+        3. Processor Classification
+      </h3>
+
+      <p class="muted">
+        Select every processor group that applies,
+        then select your primary processor group.
+      </p>
+
+
+      <div
+        id="categoryList"
+        class="checkgrid"
+      ></div>
+
+
+      <div class="grid2 below">
+
+        <label>
+
+          Primary Processor Group *
+
+          <select
+            name="primaryGroup"
+            id="primaryGroup"
+            required
+          ></select>
+
+        </label>
+
+
+        <label>
+
+          Main Products
+
+          <textarea
+            name="products"
+            placeholder="Example: cheese, dried mango, pepper sauce, body butter..."
+          ></textarea>
+
+        </label>
+
+      </div>
+
+    </div>
+
+
+
+    <!-- EXPERIENCE AND CREDENTIALS -->
+
+    <div class="card">
+
+      <h3>
+        4. Business Experience & Credentials
+      </h3>
+
+
+      <label>
+
+        How long have you been in business?
+
+        <select
+          name="yearsBusiness"
+        >
+
+          <option>
+            1–5 years
+          </option>
+
+          <option>
+            5–10 years
+          </option>
+
+          <option>
+            10 years and over
+          </option>
+
+        </select>
+
+      </label>
+
+
+      <p>
+        <b>
+          What do you currently have?
+        </b>
+      </p>
+
+
+      <div
+        id="credentialList"
+        class="checkgrid"
+      ></div>
+
+
+      <div
+        id="credentialOtherWrap"
+        class="below hidden"
+      >
+
+        <label>
+
+          Please specify what other item you currently have
+
+          <input
+            type="text"
+            name="credentialOther"
+            id="credentialOther"
+            placeholder="Please specify..."
+          >
+
+        </label>
+
+      </div>
+
+    </div>
+
+
+
+    <!-- PRODUCTION AND MARKETS -->
+
+    <div class="card">
+
+      <h3>
+        5. Production Capacity & Markets
+      </h3>
+
+      <p class="muted">
+        This information helps TAPA understand the current
+        size of your operation and your future growth goals.
+      </p>
+
+
+      <div class="grid2">
+
+        <label>
+
+          Current Production Capacity
+
+          <input
+            type="text"
+            name="productionCapacity"
+            placeholder="Example: 500 bottles per month"
+          >
+
+        </label>
+
+
+        <label>
+
+          Target Production Capacity
+
+          <input
+            type="text"
+            name="targetProductionCapacity"
+            placeholder="Example: 1,500 bottles per month"
+          >
+
+        </label>
+
+      </div>
+
+
+      <p>
+        <b>
+          Current Market
+        </b>
+      </p>
+
+
+      <div class="checkgrid">
+
+        <label>
+
+          <input
+            type="checkbox"
+            name="currentMarkets"
+            value="Local"
+          >
+
+          Local – Tobago / Trinidad & Tobago
+
+        </label>
+
+
+        <label>
+
+          <input
+            type="checkbox"
+            name="currentMarkets"
+            value="Regional"
+          >
+
+          Regional – Caribbean
+
+        </label>
+
+
+        <label>
+
+          <input
+            type="checkbox"
+            name="currentMarkets"
+            value="International"
+          >
+
+          International / Export
+
+        </label>
+
+      </div>
+
+
+      <p class="below">
+
+        <b>
+          Target Market
+        </b>
+
+      </p>
+
+
+      <div class="checkgrid">
+
+        <label>
+
+          <input
+            type="checkbox"
+            name="targetMarkets"
+            value="Local"
+          >
+
+          Local – Tobago / Trinidad & Tobago
+
+        </label>
+
+
+        <label>
+
+          <input
+            type="checkbox"
+            name="targetMarkets"
+            value="Regional"
+          >
+
+          Regional – Caribbean
+
+        </label>
+
+
+        <label>
+
+          <input
+            type="checkbox"
+            name="targetMarkets"
+            value="International"
+          >
+
+          International / Export
+
+        </label>
+
+      </div>
+
+
+      <label class="below">
+
+        Production / Business Targets
+
+        <textarea
+          name="businessTargets"
+          placeholder="Describe your production, sales, distribution, expansion or export targets over the next 1–3 years."
+        ></textarea>
+
+      </label>
+
+    </div>
+
+
+
+    <!-- SUPPORT -->
+
+    <div class="card">
+
+      <h3>
+        6. Support Required
+      </h3>
+
+
+      <p>
+        What areas in your business require support?
+      </p>
+
+
+      <div
+        id="supportList"
+        class="checkgrid"
+      ></div>
+
+
+      <label class="below">
+
+        What would you like to see from the Association as a member?
+
+        <textarea
+          name="expectations"
+          placeholder="Tell us how TAPA can support you and your business."
+        ></textarea>
+
+      </label>
+
+    </div>
+
+
+
+    <!-- SUPPORTING DOCUMENTS -->
+
+    <div class="card">
+
+      <h3>
+        7. Supporting Documents
+      </h3>
+
+
+      <p class="muted">
+        Supporting documents are optional,
+        but providing them may help TAPA better assess your
+        business readiness and support needs.
+      </p>
+
+
+      <p>
+        <b>
+          Documents may include:
+        </b>
+      </p>
+
+
+      <ul>
+
+        <li>
+          Business Registration documents
+        </li>
+
+        <li>
+          Food Badge or Food Handler Certificate
+        </li>
+
+        <li>
+          Public Health or production facility approval
+        </li>
+
+        <li>
+          Product labels or packaging samples
+        </li>
+
+        <li>
+          Product photographs
+        </li>
+
+        <li>
+          Training certificates
+        </li>
+
+        <li>
+          GMP or Good Manufacturing Practices documentation
+        </li>
+
+        <li>
+          HACCP or food safety certification
+        </li>
+
+        <li>
+          Standards or quality certification
+        </li>
+
+        <li>
+          Export registration or market-access documentation
+        </li>
+
+        <li>
+          Any other document relevant to your operation
+        </li>
+
+      </ul>
+
+
+      <p class="muted">
+        Upload up to 6 PDF, JPG, PNG or WEBP files.
+        Maximum file size: 8 MB each.
+      </p>
+
+
+      <input
+        type="file"
+        name="documents"
+        multiple
+        accept=".pdf,.jpg,.jpeg,.png,.webp"
+      >
+
+    </div>
+
+
+
+    <!-- DECLARATION -->
+
+    <div class="card">
+
+      <h3>
+        8. Declaration
+      </h3>
+
+
+      <label>
+
+        Typed Signature Name *
+
+        <input
+          name="signatureName"
+          required
+        >
+
+      </label>
+
+
+      <label class="consent">
+
+        <input
+          type="checkbox"
+          name="declaration"
+          value="yes"
+          required
+        >
+
+        I confirm that the information provided is accurate
+        and consent to its use for TAPA membership administration,
+        processor classification and business-support planning.
+
+      </label>
+
+
+      <br><br>
+
+
+      <button
+        class="primary"
+        type="submit"
+      >
+        Submit Registration
+      </button>
+
+
+      <div id="formMsg"></div>
+
+    </div>
+
+
+  </form>
+
+</section>
+
+
+
+<!-- =============================== -->
+<!-- STATUS -->
+<!-- =============================== -->
+
+<section
+  id="status"
+  class="view hidden"
+>
+
+  <div class="card narrow">
+
+    <h2>
+      Check Application Status
+    </h2>
+
+
+    <label>
+
+      Application Number
+
+      <input
+        id="statusNo"
+        placeholder="TAPA-2026-00001"
+      >
+
+    </label>
+
+
+    <label>
+
+      Email Address
+
+      <input
+        id="statusEmail"
+        type="email"
+      >
+
+    </label>
+
+
+    <button
+      id="checkStatusBtn"
+      class="primary"
+    >
+      Check Status
+    </button>
+
+
+    <div id="statusResult"></div>
+
+  </div>
+
+</section>
+
+
+
+<!-- =============================== -->
+<!-- ADMIN -->
+<!-- =============================== -->
+
+<section
+  id="admin"
+  class="view hidden"
+>
+
+
+  <div
+    id="adminLogin"
+    class="card narrow"
+  >
+
+    <h2>
+      TAPA Administrator
+    </h2>
+
+
+    <label>
+
+      Email
+
+      <input
+        id="adminEmail"
+        type="email"
+      >
+
+    </label>
+
+
+    <label>
+
+      Password
+
+      <input
+        id="adminPassword"
+        type="password"
+      >
+
+    </label>
+
+
+    <button
+      id="loginBtn"
+      class="primary"
+    >
+      Sign In
+    </button>
+
+
+    <div id="loginMsg"></div>
+
+  </div>
+
+
+
+  <div
+    id="adminPanel"
+    class="hidden"
+  >
+
+
+    <div class="adminbar">
+
+      <h2>
+        Admin Dashboard
+      </h2>
+
+
+      <div>
+
+        <a
+          class="button secondary"
+          href="/api/admin/export.csv"
+        >
+          Export CSV
+        </a>
+
+        <button
+          id="logoutBtn"
+          class="secondary"
+        >
+          Sign Out
+        </button>
+
+      </div>
+
+    </div>
+
+
+
+    <div class="stats">
+
+      <div class="stat">
+
+        <span>
+          Total
+        </span>
+
+        <b id="stTotal">
+          0
+        </b>
+
+      </div>
+
+
+      <div class="stat">
+
+        <span>
+          Pending
+        </span>
+
+        <b id="stPending">
+          0
+        </b>
+
+      </div>
+
+
+      <div class="stat">
+
+        <span>
+          Under Review
+        </span>
+
+        <b id="stReview">
+          0
+        </b>
+
+      </div>
+
+
+      <div class="stat">
+
+        <span>
+          Approved
+        </span>
+
+        <b id="stApproved">
+          0
+        </b>
+
+      </div>
+
+    </div>
+
+
+
+    <div class="card">
+
+
+      <div class="toolbar">
+
+        <input
+          id="searchApps"
+          placeholder="Search name, business or application #"
+        >
+
+
+        <select id="filterStatus">
+
+          <option value="">
+            All statuses
+          </option>
+
+          <option>
+            Pending
+          </option>
+
+          <option>
+            Under Review
+          </option>
+
+          <option>
+            Approved
+          </option>
+
+          <option>
+            Rejected
+          </option>
+
+          <option>
+            More Information Required
+          </option>
+
+        </select>
+
+
+        <button
+          id="searchBtn"
+          class="secondary"
+        >
+          Search
+        </button>
+
+      </div>
+
+
+
+      <div class="scroll">
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>
+                Application
+              </th>
+
+              <th>
+                Name
+              </th>
+
+              <th>
+                Business
+              </th>
+
+              <th>
+                Group
+              </th>
+
+              <th>
+                Status
+              </th>
+
+              <th></th>
+
+            </tr>
+
+          </thead>
+
+
+          <tbody id="appRows"></tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+
+
+    <div class="card">
+
+      <h3>
+        Processor Groups
+      </h3>
+
+
+      <div class="toolbar">
+
+        <input
+          id="newCategory"
+          placeholder="Add a new processor group"
+        >
+
+
+        <button
+          id="addCategoryBtn"
+          class="secondary"
+        >
+          Add Group
+        </button>
+
+      </div>
+
+
+      <div
+        id="categoryAdmin"
+        class="chips"
+      ></div>
+
+    </div>
+
+
+  </div>
+
+</section>
+
+
 </main>
-<div id="modal" class="modal hidden"><div class="modalbox"><button id="closeModal" class="close">×</button><div id="modalBody"></div></div></div>
+
+
+
+<!-- =============================== -->
+<!-- MODAL -->
+<!-- =============================== -->
+
+<div
+  id="modal"
+  class="modal hidden"
+>
+
+  <div class="modalbox">
+
+    <button
+      id="closeModal"
+      class="close"
+    >
+      ×
+    </button>
+
+
+    <div id="modalBody"></div>
+
+  </div>
+
+</div>
+
+
+
+<!-- QR CODE LIBRARY -->
+
 <script
-  src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">
-</script>
+  src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+></script>
+
+
+<!-- APPLICATION JAVASCRIPT -->
 
 <script src="/app.js"></script>
 
+
 </body>
+
 </html>
